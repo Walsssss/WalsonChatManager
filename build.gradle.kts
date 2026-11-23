@@ -1,34 +1,67 @@
+
 plugins {
-    id("java-library")
+    java
     id("xyz.jpenilla.run-paper") version "3.1.0"
+    id("com.gradleup.shadow") version "9.2.2"
 }
+
+group = property("group")!!
+version = property("version")!!
 
 repositories {
     mavenCentral()
-    maven("https://repo.papermc.io/repository/maven-public/")
+
+    maven {
+        name = "papermc"
+        url = uri("https://repo.papermc.io/repository/maven-public/")
+    }
+
+    maven {
+        name = "discordsrv"
+        url = uri("https://nexus.scarsz.me/content/groups/public/")
+    }
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:26.3.build.+")
+    // Paper API: compatibility baseline
+    compileOnly("io.papermc.paper:paper-api:26.1.2.build.+")
+
+    // SQLite database driver
+    implementation("org.xerial:sqlite-jdbc:3.50.3.0")
+
+    // DiscordSRV API (optional integration)
+    compileOnly("com.discordsrv:discordsrv:1.28.0")
 }
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    toolchain.languageVersion.set(JavaLanguageVersion.of(25))
 }
 
 tasks {
     runServer {
-        // Configure the Minecraft version for our task.
-        // This is the only required configuration besides applying the plugin.
-        // Your plugin's jar (or shadowJar if present) will be used automatically.
-        minecraftVersion("26.3")
-        jvmArgs("-Xms2G", "-Xmx2G")
+        minecraftVersion("26.1.2")
     }
 
     processResources {
-        val props = mapOf("version" to version)
+        filteringCharset = "UTF-8"
+
+        val pluginVersion = project.version
         filesMatching("plugin.yml") {
-            expand(props)
+            expand("version" to pluginVersion)
         }
     }
+
+    shadowJar {
+        archiveClassifier.set("")
+        mergeServiceFiles()
+    }
+
+    build {
+        dependsOn(shadowJar)
+    }
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+    options.release.set(25)
 }

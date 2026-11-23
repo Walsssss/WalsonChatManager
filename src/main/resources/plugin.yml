@@ -1,6 +1,90 @@
+
 name: WalsonChatManager
 version: '${version}'
 
 main: walson.one.walsonChatManager.WalsonChatManager
-api-version: '26.3'
+api-version: '26.1'
 load: POSTWORLD
+
+softdepend:
+  - DiscordSRV
+
+commands:
+  walsonchatmanager:
+    description: Main WalsonChatManager command.
+    usage: /walsonchatmanager <help|reload>
+    aliases:
+      - wcm
+
+  mute:
+    description: Mutes a player.
+    usage: /mute <player> [duration] [reason]
+
+  unmute:
+    description: Unmutes a player.
+    usage: /unmute <player> [reason]
+
+  chatmanager:
+    description: Opens the Chat Manager GUI.
+    usage: /chatmanager
+    aliases:
+      - cm
+
+  chatfilter:
+    description: Opens the Chat Filter GUI.
+    usage: /chatfilter
+
+  muteglobal:
+    description: Toggles global chat.
+    usage: /muteglobal
+
+permissions:
+  walsonchatmanager.admin:
+    description: Full access to WalsonChatManager.
+    default: op
+    children:
+      walsonchatmanager.help: true
+      walsonchatmanager.reload: true
+      walsonchatmanager.mute: true
+      walsonchatmanager.gui: true
+      walsonchatmanager.filter: true
+      walsonchatmanager.muteglobal: true
+      walsonchatmanager.bypass.globalmute: true
+      walsonchatmanager.bypass.filter: true
+      walsonchatmanager.filter.notify: true
+
+  walsonchatmanager.help:
+    description: Allows access to the WalsonChatManager help command.
+    default: op
+
+  walsonchatmanager.reload:
+    description: Allows reloading WalsonChatManager configuration files.
+    default: op
+
+  walsonchatmanager.mute:
+    description: Allows muting and unmuting players.
+    default: op
+
+  walsonchatmanager.gui:
+    description: Allows access to management GUIs.
+    default: op
+
+  walsonchatmanager.filter:
+    description: Allows chat filter management.
+    default: op
+
+  walsonchatmanager.muteglobal:
+    description: Allows toggling global chat.
+    default: op
+
+  walsonchatmanager.bypass.globalmute:
+    description: Allows bypassing global chat mute.
+    default: op
+
+  walsonchatmanager.bypass.filter:
+    description: Allows bypassing chat filters.
+    default: op
+
+  walsonchatmanager.filter.notify:
+    description: Receives notifications when players trigger chat filters.
+    default: op

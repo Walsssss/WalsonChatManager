@@ -1,0 +1,37 @@
+
+prefix: "<gradient:#E879F9:#A855F7>WCM</gradient> <dark_gray>»"
+
+general:
+  no-permission: "<red>You don't have permission to do this."
+  player-not-found: "<red>Player not found."
+  players-only: "<red>This command can only be used by players."
+  reload-success: "<green>Configuration successfully reloaded."
+  invalid-usage: "<red>Invalid command usage."
+
+mute:
+  success: "<green>You muted <white>%player%</white>."
+  received: "<red>You have been muted."
+  received-reason: "<gray>Reason: <white>%reason%</white>"
+  received-duration: "<gray>Duration: <white>%duration%</white>"
+  already-muted: "<red>This player is already muted."
+  not-muted: "<red>This player is not muted."
+  expired: "<green>Your mute has expired."
+  permanent: "Permanent"
+
+unmute:
+  success: "<green>You unmuted <white>%player%</white>."
+  received: "<green>Your mute has been removed."
+  not-muted: "<red>This player is not muted."
+
+global-chat:
+  muted: "<red>Global chat has been disabled by %staff%."
+  unmuted: "<green>Global chat has been enabled by %staff%."
+  blocked: "<red>Global chat is currently disabled."
+
+filter:
+  blocked: "<red>Your message was blocked by the chat filter."
+  warned: "<red>Please watch your language."
+  muted: "<red>You were muted for violating the chat rules."
+
+database:
+  error: "<red>A database error occurred. Please contact an administrator."

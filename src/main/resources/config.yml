@@ -1,0 +1,40 @@
+
+settings:
+  debug: false
+  prefix: "<gradient:#E879F9:#A855F7>WalsonChatManager</gradient>"
+
+  update-checker: true
+
+database:
+  type: SQLITE
+  file: "mutes.db"
+
+chat:
+  global-mute:
+    enabled: false
+    staff-bypass: true
+    announce: true
+
+  filtering:
+    enabled: true
+
+  cooldown:
+    enabled: false
+    seconds: 3
+
+gui:
+  title: "<dark_gray>WalsonChatManager"
+  rows: 6
+
+  filler:
+    enabled: true
+    material: BLACK_STAINED_GLASS_PANE
+    name: " "
+
+integrations:
+  discordsrv:
+    enabled: true
+    announce-mutes: true
+    announce-unmutes: true
+    announce-global-chat: true
+    staff-logs: true

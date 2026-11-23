@@ -1,0 +1,42 @@
+
+settings:
+  enabled: true
+  require-discordsrv: false
+
+channels:
+  moderation: "000000000000000000"
+  staff: "000000000000000000"
+  announcements: "000000000000000000"
+
+messages:
+  mute:
+    title: "Player Muted"
+    description: |
+      **Player:** %player%
+      **Staff:** %staff%
+      **Duration:** %duration%
+      **Reason:** %reason%
+
+  unmute:
+    title: "Player Unmuted"
+    description: |
+      **Player:** %player%
+      **Staff:** %staff%
+      **Reason:** %reason%
+
+  global-muted:
+    title: "Global Chat Disabled"
+    description: "Global chat was disabled by %staff%."
+
+  global-unmuted:
+    title: "Global Chat Enabled"
+    description: "Global chat was enabled by %staff%."
+
+  staff-log:
+    title: "Moderation Log"
+    description: |
+      **Action:** %action%
+      **Target:** %player%
+      **Staff:** %staff%
+      **Duration:** %duration%
+      **Reason:** %reason%

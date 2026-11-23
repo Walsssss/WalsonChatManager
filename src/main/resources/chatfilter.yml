@@ -1,0 +1,63 @@
+
+settings:
+  enabled: true
+  case-sensitive: false
+  ignore-spaces: false
+  notify-staff: true
+
+rules:
+
+  advertising:
+    display-name: "Advertising"
+    enabled: true
+    priority: 1
+    match-type: CONTAINS
+
+    words:
+      - "discord.gg/"
+      - "join my server"
+      - "play.example.com"
+
+    actions:
+      - BLOCK_MESSAGE
+      - WARNING
+      - TEMPORARY_MUTE
+
+    punishment:
+      duration: "30m"
+      reason: "Advertising"
+
+  cursing:
+    display-name: "Cursing"
+    enabled: true
+    priority: 2
+    match-type: WORD
+
+    words:
+      - "exampleword1"
+      - "exampleword2"
+
+    actions:
+      - BLOCK_MESSAGE
+      - WARNING
+
+    punishment:
+      duration: "0"
+      reason: "Inappropriate Language"
+
+  inappropriate:
+    display-name: "Inappropriate Content"
+    enabled: true
+    priority: 3
+    match-type: CONTAINS
+
+    words:
+      - "example phrase"
+
+    actions:
+      - BLOCK_MESSAGE
+      - TEMPORARY_MUTE
+
+    punishment:
+      duration: "1d"
+      reason: "Inappropriate Content"
