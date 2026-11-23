@@ -1,4 +1,3 @@
-
 package walson.one.walsonChatManager.models;
 
 import java.util.UUID;
@@ -9,8 +8,21 @@ public record MuteData(
         String reason,
         String mutedBy,
         long issuedAt,
-        Long expiresAt
+        Long expiresAt,
+        boolean silentAnnouncement
 ) {
+
+    // Backward-compatible constructor for existing call sites.
+    public MuteData(
+            UUID uuid,
+            String username,
+            String reason,
+            String mutedBy,
+            long issuedAt,
+            Long expiresAt
+    ) {
+        this(uuid, username, reason, mutedBy, issuedAt, expiresAt, false);
+    }
 
     public boolean isPermanent() {
         return expiresAt == null;

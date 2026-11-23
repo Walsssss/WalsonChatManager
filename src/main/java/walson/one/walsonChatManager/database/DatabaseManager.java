@@ -48,7 +48,8 @@ public class DatabaseManager {
                         reason TEXT NOT NULL,
                         muted_by TEXT NOT NULL,
                         issued_at INTEGER NOT NULL,
-                        expires_at INTEGER
+                        expires_at INTEGER,
+                        silent_announcement INTEGER NOT NULL DEFAULT 0
                     );
                 """);
 
@@ -62,10 +63,17 @@ public class DatabaseManager {
                         reason TEXT NOT NULL,
                         staff TEXT NOT NULL,
                         duration TEXT,
-                        timestamp INTEGER NOT NULL
+                        timestamp INTEGER NOT NULL,
+                        silent_announcement INTEGER NOT NULL DEFAULT 0
                     );
                 """);
             }
+
+            // Migrate databases created by earlier WalsonChatManager versions.
+            addColumnIfMissing("active_mutes", "silent_announcement",
+                    "INTEGER NOT NULL DEFAULT 0");
+            addColumnIfMissing("mute_history", "silent_announcement",
+                    "INTEGER NOT NULL DEFAULT 0");
 
             plugin.getLogger().info("SQLite connected successfully.");
             return true;
@@ -76,6 +84,33 @@ public class DatabaseManager {
             );
 
             return false;
+        }
+    }
+
+    private void addColumnIfMissing(
+            String table,
+            String column,
+            String definition
+    ) throws SQLException {
+        boolean exists = false;
+
+        try (Statement statement = connection.createStatement();
+             var result = statement.executeQuery("PRAGMA table_info(" + table + ")")) {
+            while (result.next()) {
+                if (column.equalsIgnoreCase(result.getString("name"))) {
+                    exists = true;
+                    break;
+                }
+            }
+        }
+
+        if (!exists) {
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate(
+                        "ALTER TABLE " + table + " ADD COLUMN "
+                                + column + " " + definition
+                );
+            }
         }
     }
 

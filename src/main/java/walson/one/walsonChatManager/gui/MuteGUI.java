@@ -115,6 +115,7 @@ public class MuteGUI {
         );
 
         holder.setDurationMillis(duration);
+        holder.setSilentAnnouncement(previous.isSilentAnnouncement());
 
         Inventory inventory = createInventory(
                 holder,
@@ -152,6 +153,23 @@ public class MuteGUI {
 
             holder.addOption(slot, preset.value());
         }
+
+        inventory.setItem(
+                47,
+                createItem(
+                        holder.isSilentAnnouncement()
+                                ? Material.REDSTONE_TORCH
+                                : Material.BELL,
+                        holder.isSilentAnnouncement()
+                                ? "<red>Silent Mute: Enabled"
+                                : "<green>Silent Mute: Disabled",
+                        "<gray>When enabled, no public mute announcement",
+                        "<gray>will be sent in Minecraft global chat.",
+                        "",
+                        "<yellow>Click to toggle"
+                )
+        );
+        holder.addOption(47, "__TOGGLE_SILENT__");
 
         inventory.setItem(
                 49,
@@ -209,6 +227,16 @@ public class MuteGUI {
             MenuHolder holder,
             String reason
     ) {
+        if (reason.equals("__TOGGLE_SILENT__")) {
+            holder.setSilentAnnouncement(!holder.isSilentAnnouncement());
+            openReasonMenu(
+                    staff,
+                    holder,
+                    holder.getDurationMillis()
+            );
+            return;
+        }
+
         if (reason.equals("__CUSTOM__")) {
             chatInput.request(
                     staff,
@@ -251,7 +279,8 @@ public class MuteGUI {
                 holder.getTargetName(),
                 reason,
                 staff.getName(),
-                duration
+                duration,
+                holder.isSilentAnnouncement()
         );
 
         if (!success) {
@@ -262,6 +291,10 @@ public class MuteGUI {
             );
             return;
         }
+
+        plugin.getMuteManager().announceMute(
+                plugin.getMuteManager().getMute(holder.getTargetUUID())
+        );
 
         String formattedDuration = TimeUtils.formatDurationWords(duration);
 

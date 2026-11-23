@@ -104,6 +104,10 @@ public class MuteCommand implements CommandExecutor {
             return true;
         }
 
+        plugin.getMuteManager().announceMute(
+                plugin.getMuteManager().getMute(target.getUniqueId())
+        );
+
         String formattedDuration = TimeUtils.formatDurationWords(duration);
 
         MessageUtils.send(

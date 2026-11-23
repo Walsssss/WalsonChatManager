@@ -10,6 +10,9 @@ database:
   file: "mutes.db"
 
 chat:
+  mute-announcements:
+    enabled: true
+
   global-mute:
     enabled: false
     staff-bypass: true

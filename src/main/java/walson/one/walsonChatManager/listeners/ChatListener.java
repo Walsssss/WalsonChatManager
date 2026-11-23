@@ -212,6 +212,10 @@ public class ChatListener implements Listener {
 
             if (muted) {
 
+                plugin.getMuteManager().announceMute(
+                        plugin.getMuteManager().getMute(player.getUniqueId())
+                );
+
                 MessageUtils.send(
                         player,
                         plugin.getMessages(),

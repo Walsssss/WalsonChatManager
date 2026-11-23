@@ -28,6 +28,7 @@ public class MenuHolder implements InventoryHolder {
 
     private Long durationMillis;
     private int page;
+    private boolean silentAnnouncement;
 
     private final Map<Integer, String> options = new HashMap<>();
 
@@ -75,6 +76,14 @@ public class MenuHolder implements InventoryHolder {
 
     public void setDurationMillis(Long durationMillis) {
         this.durationMillis = durationMillis;
+    }
+
+    public boolean isSilentAnnouncement() {
+        return silentAnnouncement;
+    }
+
+    public void setSilentAnnouncement(boolean silentAnnouncement) {
+        this.silentAnnouncement = silentAnnouncement;
     }
 
     public int getPage() {

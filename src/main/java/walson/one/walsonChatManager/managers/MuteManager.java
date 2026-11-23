@@ -44,7 +44,8 @@ public class MuteManager {
                         result.getString("reason"),
                         result.getString("muted_by"),
                         result.getLong("issued_at"),
-                        expiresAt
+                        expiresAt,
+                        result.getInt("silent_announcement") != 0
                 );
 
                 if (mute.isExpired()) {
@@ -72,6 +73,17 @@ public class MuteManager {
             String staff,
             long duration
     ) {
+        return mute(uuid, username, reason, staff, duration, false);
+    }
+
+    public boolean mute(
+            UUID uuid,
+            String username,
+            String reason,
+            String staff,
+            long duration,
+            boolean silentAnnouncement
+    ) {
         if (duration == 0 || activeMutes.containsKey(uuid)) {
             return false;
         }
@@ -86,7 +98,8 @@ public class MuteManager {
         }
 
         MuteData mute = new MuteData(
-                uuid, username, reason, staff, now, expiresAt
+                uuid, username, reason, staff, now, expiresAt,
+                silentAnnouncement
         );
 
         Connection connection = database.getConnection();
@@ -96,13 +109,13 @@ public class MuteManager {
 
             try (PreparedStatement statement = connection.prepareStatement("""
                     INSERT INTO active_mutes
-                    (uuid, username, reason, muted_by, issued_at, expires_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    (uuid, username, reason, muted_by, issued_at, expires_at, silent_announcement)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """);
                  PreparedStatement history = connection.prepareStatement("""
                     INSERT INTO mute_history
-                    (uuid, username, action, reason, staff, duration, timestamp)
-                    VALUES (?, ?, 'MUTE', ?, ?, ?, ?)
+                    (uuid, username, action, reason, staff, duration, timestamp, silent_announcement)
+                    VALUES (?, ?, 'MUTE', ?, ?, ?, ?, ?)
                     """)) {
 
                 statement.setString(1, uuid.toString());
@@ -116,6 +129,7 @@ public class MuteManager {
                 } else {
                     statement.setLong(6, expiresAt);
                 }
+                statement.setInt(7, silentAnnouncement ? 1 : 0);
 
                 statement.executeUpdate();
 
@@ -125,6 +139,7 @@ public class MuteManager {
                 history.setString(4, staff);
                 history.setString(5, duration < 0 ? "PERMANENT" : String.valueOf(duration));
                 history.setLong(6, now);
+                history.setInt(7, silentAnnouncement ? 1 : 0);
                 history.executeUpdate();
 
                 connection.commit();
@@ -191,6 +206,50 @@ public class MuteManager {
 
     public MuteData getMute(UUID uuid) {
         return activeMutes.get(uuid);
+    }
+
+    /**
+     * Announces a staff-issued mute to Minecraft global chat.
+     * Silent mutes remain stored in the database for Discord moderation
+     * logging, but are intentionally omitted from public announcements.
+     */
+    public void announceMute(MuteData mute) {
+        if (mute == null || mute.silentAnnouncement()) {
+            return;
+        }
+
+        if (!plugin.getConfig().getBoolean(
+                "chat.mute-announcements.enabled", true
+        )) {
+            return;
+        }
+
+        String duration = mute.isPermanent()
+                ? "Permanent"
+                : walson.one.walsonChatManager.utils.TimeUtils
+                        .formatDurationWords(mute.expiresAt() - mute.issuedAt());
+
+        Map<String, String> placeholders = Map.of(
+                "player", mute.username(),
+                "staff", mute.mutedBy(),
+                "duration", duration,
+                "reason", mute.reason()
+        );
+
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            MessageUtils.send(
+                    online,
+                    plugin.getMessages(),
+                    "mute.announcement",
+                    placeholders
+            );
+        }
+
+        plugin.getLogger().info(
+                mute.username() + " was muted for " + duration
+                        + " by " + mute.mutedBy() + ". Reason: "
+                        + mute.reason()
+        );
     }
 
     public boolean isMuted(UUID uuid) {

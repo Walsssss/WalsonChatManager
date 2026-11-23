@@ -16,6 +16,7 @@ mute:
   not-muted: "<red>This player is not muted."
   expired: "<green>Your mute has expired."
   permanent: "Permanent"
+  announcement: "<yellow><white>%player%</white> has been muted for <white>%duration%</white> by <white>%staff%</white>. <gray>Reason: <white>%reason%</white>."
 
 unmute:
   success: "<green>You have unmuted <white>%player%</white>."
