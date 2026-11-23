@@ -12,15 +12,21 @@ public class GUIListener implements Listener {
     private final MuteGUI muteGUI;
     private final UnmuteGUI unmuteGUI;
     private final ChatFilterGUI chatFilterGUI;
+    private final MuteHistoryGUI muteHistoryGUI;
+    private final ChatManagerGUI chatManagerGUI;
 
     public GUIListener(
             MuteGUI muteGUI,
             UnmuteGUI unmuteGUI,
-            ChatFilterGUI chatFilterGUI
+            ChatFilterGUI chatFilterGUI,
+            MuteHistoryGUI muteHistoryGUI,
+            ChatManagerGUI chatManagerGUI
     ) {
         this.muteGUI = muteGUI;
         this.unmuteGUI = unmuteGUI;
         this.chatFilterGUI = chatFilterGUI;
+        this.muteHistoryGUI = muteHistoryGUI;
+        this.chatManagerGUI = chatManagerGUI;
     }
 
     @EventHandler
@@ -58,20 +64,23 @@ public class GUIListener implements Listener {
 
         switch (holder.getType()) {
 
-            // Existing mute GUI
             case MUTE_DURATION ->
                     muteGUI.selectDuration(player, holder, option);
 
             case MUTE_REASON ->
                     muteGUI.selectReason(player, holder, option);
 
-            // Existing unmute GUI
             case UNMUTE_REASON ->
                     unmuteGUI.selectReason(player, holder, option);
 
-            // New chat filter GUI
             case FILTER_LIST, FILTER_EDITOR, FILTER_WORDS ->
                     chatFilterGUI.handleClick(player, holder, slot);
+
+            case MUTE_HISTORY ->
+                    muteHistoryGUI.handleClick(player, holder, option);
+
+            case CHAT_MANAGER ->
+                    chatManagerGUI.handleClick(player, holder, option);
         }
     }
 

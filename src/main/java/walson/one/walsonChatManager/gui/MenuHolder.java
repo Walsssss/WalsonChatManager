@@ -16,7 +16,9 @@ public class MenuHolder implements InventoryHolder {
         UNMUTE_REASON,
         FILTER_LIST,
         FILTER_EDITOR,
-        FILTER_WORDS
+        FILTER_WORDS,
+        MUTE_HISTORY,
+        CHAT_MANAGER
     }
 
     private final MenuType type;
@@ -25,6 +27,8 @@ public class MenuHolder implements InventoryHolder {
     private final String ruleId;
 
     private Long durationMillis;
+    private int page;
+
     private final Map<Integer, String> options = new HashMap<>();
 
     private Inventory inventory;
@@ -71,6 +75,14 @@ public class MenuHolder implements InventoryHolder {
 
     public void setDurationMillis(Long durationMillis) {
         this.durationMillis = durationMillis;
+    }
+
+    public int getPage() {
+        return page;
+    }
+
+    public void setPage(int page) {
+        this.page = Math.max(0, page);
     }
 
     public void addOption(int slot, String value) {

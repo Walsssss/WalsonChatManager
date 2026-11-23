@@ -177,6 +177,9 @@ public class UnmuteGUI {
                     "unmute.received"
             );
         }
+
+        // Close the menu after the unmute has been successfully saved.
+        staff.closeInventory();
     }
 
     private ItemStack createItem(

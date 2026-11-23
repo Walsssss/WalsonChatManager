@@ -263,38 +263,37 @@ public class MuteGUI {
             return;
         }
 
+        String formattedDuration = TimeUtils.formatDurationWords(duration);
+
         MessageUtils.send(
                 staff,
                 plugin.getMessages(),
                 "mute.success",
-                Map.of("player", holder.getTargetName())
+                Map.of(
+                        "player", holder.getTargetName(),
+                        "reason", reason,
+                        "duration", formattedDuration,
+                            "player-duration", TimeUtils.formatPlayerMuteDuration(duration)
+                )
         );
 
         OfflinePlayer target = Bukkit.getOfflinePlayer(holder.getTargetUUID());
 
         if (target.isOnline() && target.getPlayer() != null) {
-            Player online = target.getPlayer();
-
             MessageUtils.send(
-                    online,
+                    target.getPlayer(),
                     plugin.getMessages(),
-                    "mute.received"
-            );
-
-            MessageUtils.send(
-                    online,
-                    plugin.getMessages(),
-                    "mute.received-reason",
-                    Map.of("reason", reason)
-            );
-
-            MessageUtils.send(
-                    online,
-                    plugin.getMessages(),
-                    "mute.received-duration",
-                    Map.of("duration", TimeUtils.formatDuration(duration))
+                    "mute.received",
+                    Map.of(
+                            "reason", reason,
+                            "duration", formattedDuration,
+                            "player-duration", TimeUtils.formatPlayerMuteDuration(duration)
+                    )
             );
         }
+
+        // Close the menu after the mute has been successfully saved.
+        staff.closeInventory();
     }
 
     private Inventory createInventory(MenuHolder holder, String title) {

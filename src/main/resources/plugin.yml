@@ -24,11 +24,16 @@ commands:
     description: Unmutes a player.
     usage: /unmute <player> [reason]
 
+  mutehistory:
+    description: Opens a player's mute history GUI.
+    usage: /mutehistory <username>
+
   chatmanager:
-    description: Opens the Chat Manager GUI.
+    description: Opens the main Chat Manager GUI.
     usage: /chatmanager
     aliases:
       - cm
+    permission: walsonchatmanager.gui
 
   chatfilter:
     description: Opens the Chat Filter GUI.
@@ -36,7 +41,8 @@ commands:
 
   muteglobal:
     description: Toggles global chat.
-    usage: /muteglobal
+    usage: /muteglobal [on|off|toggle]
+    permission: walsonchatmanager.muteglobal
 
 permissions:
   walsonchatmanager.admin:
@@ -46,6 +52,7 @@ permissions:
       walsonchatmanager.help: true
       walsonchatmanager.reload: true
       walsonchatmanager.mute: true
+      walsonchatmanager.mutehistory: true
       walsonchatmanager.gui: true
       walsonchatmanager.filter: true
       walsonchatmanager.muteglobal: true
@@ -65,8 +72,12 @@ permissions:
     description: Allows muting and unmuting players.
     default: op
 
+  walsonchatmanager.mutehistory:
+    description: Allows viewing a player's mute history.
+    default: op
+
   walsonchatmanager.gui:
-    description: Allows access to management GUIs.
+    description: Allows access to the main management GUI.
     default: op
 
   walsonchatmanager.filter:

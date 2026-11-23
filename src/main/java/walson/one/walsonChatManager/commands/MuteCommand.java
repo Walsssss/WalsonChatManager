@@ -104,34 +104,30 @@ public class MuteCommand implements CommandExecutor {
             return true;
         }
 
+        String formattedDuration = TimeUtils.formatDurationWords(duration);
+
         MessageUtils.send(
                 sender,
                 plugin.getMessages(),
                 "mute.success",
-                Map.of("player", targetName)
+                Map.of(
+                        "player", targetName,
+                        "reason", reason,
+                        "duration", formattedDuration,
+                            "player-duration", TimeUtils.formatPlayerMuteDuration(duration)
+                )
         );
 
         if (target.isOnline() && target.getPlayer() != null) {
-            Player online = target.getPlayer();
-
             MessageUtils.send(
-                    online,
+                    target.getPlayer(),
                     plugin.getMessages(),
-                    "mute.received"
-            );
-
-            MessageUtils.send(
-                    online,
-                    plugin.getMessages(),
-                    "mute.received-reason",
-                    Map.of("reason", reason)
-            );
-
-            MessageUtils.send(
-                    online,
-                    plugin.getMessages(),
-                    "mute.received-duration",
-                    Map.of("duration", TimeUtils.formatDuration(duration))
+                    "mute.received",
+                    Map.of(
+                            "reason", reason,
+                            "duration", formattedDuration,
+                            "player-duration", TimeUtils.formatPlayerMuteDuration(duration)
+                    )
             );
         }
 

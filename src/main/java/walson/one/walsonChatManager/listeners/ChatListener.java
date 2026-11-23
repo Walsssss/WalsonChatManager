@@ -2,6 +2,7 @@
 package walson.one.walsonChatManager.listeners;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
+
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
@@ -14,62 +15,121 @@ import org.bukkit.event.Listener;
 import walson.one.walsonChatManager.WalsonChatManager;
 import walson.one.walsonChatManager.managers.ChatFilterManager;
 import walson.one.walsonChatManager.managers.ChatInputManager;
+import walson.one.walsonChatManager.managers.GlobalChatManager;
+
 import walson.one.walsonChatManager.models.FilterAction;
 import walson.one.walsonChatManager.models.FilterRule;
 import walson.one.walsonChatManager.models.MuteData;
+
+import walson.one.walsonChatManager.utils.MessageUtils;
 import walson.one.walsonChatManager.utils.TimeUtils;
+
+import java.util.Map;
 
 public class ChatListener implements Listener {
 
     private final WalsonChatManager plugin;
+
     private final ChatInputManager chatInputManager;
     private final ChatFilterManager chatFilterManager;
+    private final GlobalChatManager globalChatManager;
 
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public ChatListener(
             WalsonChatManager plugin,
             ChatInputManager chatInputManager,
-            ChatFilterManager chatFilterManager
+            ChatFilterManager chatFilterManager,
+            GlobalChatManager globalChatManager
     ) {
         this.plugin = plugin;
         this.chatInputManager = chatInputManager;
         this.chatFilterManager = chatFilterManager;
+        this.globalChatManager = globalChatManager;
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(
+            priority = EventPriority.HIGHEST,
+            ignoreCancelled = true
+    )
     public void onChat(AsyncChatEvent event) {
+
         Player player = event.getPlayer();
 
-        // Chat input for GUI prompts must not be processed by the filter.
+        // 1. Handle pending GUI input first.
         if (chatInputManager.handle(event)) {
             return;
         }
 
-        // Existing mute check.
-        MuteData mute = plugin.getMuteManager().getMute(player.getUniqueId());
+        // 2. Check individual player mute.
+        MuteData mute = plugin.getMuteManager()
+                .getMute(player.getUniqueId());
 
         if (mute != null && !mute.isExpired()) {
+
             event.setCancelled(true);
 
-            Bukkit.getScheduler().runTask(plugin, () ->
-                    player.sendMessage(miniMessage.deserialize(
-                            "<red>You are muted and cannot send messages."
-                    ))
+            String remaining = TimeUtils.formatPlayerMuteDuration(
+                    mute.isPermanent()
+                            ? -1L
+                            : mute.getRemainingTime()
             );
 
+            Bukkit.getScheduler().runTask(plugin, () -> {
+
+                if (!player.isOnline()) {
+                    return;
+                }
+
+                MessageUtils.send(
+                        player,
+                        plugin.getMessages(),
+                        "mute.chat-blocked",
+                        Map.of(
+                                "duration", remaining,
+                                "reason", mute.reason()
+                        )
+                );
+            });
+
             return;
         }
 
-        // Staff can bypass chat filtering.
-        if (player.hasPermission("walsonchatmanager.bypass.filter")) {
+        // 3. Check global chat mute.
+        if (globalChatManager.isMuted()
+                && !globalChatManager.canBypass(player)) {
+
+            event.setCancelled(true);
+
+            Bukkit.getScheduler().runTask(plugin, () -> {
+
+                if (!player.isOnline()) {
+                    return;
+                }
+
+                MessageUtils.send(
+                        player,
+                        plugin.getMessages(),
+                        "global-chat.blocked"
+                );
+            });
+
             return;
         }
 
+        // 4. Check chat filter bypass.
+        if (player.hasPermission(
+                "walsonchatmanager.bypass.filter"
+        )) {
+            return;
+        }
+
+        // 5. Check chat filter.
         String message = PlainTextComponentSerializer.plainText()
                 .serialize(event.message());
 
-        ChatFilterManager.Match match = chatFilterManager.findMatch(message);
+        ChatFilterManager.Match match =
+                chatFilterManager.findMatch(message);
 
         if (match == null) {
             return;
@@ -77,14 +137,17 @@ public class ChatListener implements Listener {
 
         FilterRule rule = match.rule();
 
-        // Cancel only when the configured actions require blocking or punishment.
         if (rule.blocksMessage()) {
             event.setCancelled(true);
         }
 
-        // Bukkit actions and database operations are handled on the main thread.
-        Bukkit.getScheduler().runTask(plugin, () ->
-                applyFilterActions(player, rule, match.matchedWord())
+        Bukkit.getScheduler().runTask(
+                plugin,
+                () -> applyFilterActions(
+                        player,
+                        rule,
+                        match.matchedWord()
+                )
         );
     }
 
@@ -93,15 +156,19 @@ public class ChatListener implements Listener {
             FilterRule rule,
             String matchedWord
     ) {
+
         if (!player.isOnline()) {
             return;
         }
 
         if (rule.hasAction(FilterAction.WARNING)) {
-            player.sendMessage(miniMessage.deserialize(
-                    "<red>Please watch your language. <gray>Category: <white>"
-                            + rule.id()
-            ));
+
+            MessageUtils.send(
+                    player,
+                    plugin.getMessages(),
+                    "filter.warned-category",
+                    Map.of("category", rule.id())
+            );
         }
 
         if (rule.hasAction(FilterAction.MUTE)
@@ -109,12 +176,14 @@ public class ChatListener implements Listener {
 
             long duration;
 
-            // Permanent MUTE takes precedence if both punishment actions are configured.
             if (rule.hasAction(FilterAction.MUTE)) {
                 duration = -1L;
             } else {
+
                 try {
-                    duration = TimeUtils.parseDuration(rule.duration());
+                    duration = TimeUtils.parseDuration(
+                            rule.duration()
+                    );
 
                     if (duration <= 0) {
                         plugin.getLogger().warning(
@@ -123,9 +192,11 @@ public class ChatListener implements Listener {
                         );
                         return;
                     }
+
                 } catch (Exception exception) {
                     plugin.getLogger().warning(
-                            "Could not parse filter duration for rule: " + rule.id()
+                            "Could not parse filter duration for rule: "
+                                    + rule.id()
                     );
                     return;
                 }
@@ -140,13 +211,20 @@ public class ChatListener implements Listener {
             );
 
             if (muted) {
-                player.sendMessage(miniMessage.deserialize(
-                        "<red>You have been muted by the chat filter."
-                ));
 
-                player.sendMessage(miniMessage.deserialize(
-                        "<gray>Reason: <white>" + rule.reason()
-                ));
+                MessageUtils.send(
+                        player,
+                        plugin.getMessages(),
+                        "mute.received",
+                        Map.of(
+                                "duration",
+                                TimeUtils.formatDurationWords(duration),
+                                "player-duration",
+                                TimeUtils.formatPlayerMuteDuration(duration),
+                                "reason",
+                                rule.reason()
+                        )
+                );
             }
         }
 
@@ -160,6 +238,7 @@ public class ChatListener implements Listener {
             FilterRule rule,
             String matchedWord
     ) {
+
         String notification =
                 "<dark_gray>[<light_purple>ChatFilter<dark_gray>] "
                         + "<white>" + player.getName()
@@ -172,7 +251,9 @@ public class ChatListener implements Listener {
                         "walsonchatmanager.filter.notify"
                 ))
                 .forEach(staff ->
-                        staff.sendMessage(miniMessage.deserialize(notification))
+                        staff.sendMessage(
+                                miniMessage.deserialize(notification)
+                        )
                 );
     }
 }
