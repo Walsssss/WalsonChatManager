@@ -10,6 +10,7 @@ general:
 
 mute:
   success: "<green>You have muted <white>%player%</white>. <gray>Reason: <white>%reason%</white>. <gray>Time: <white>%duration%</white>."
+  pending-success: "<green>You have scheduled a mute for offline player <white>%player%</white>. <gray>Duration: <white>%duration%</white>. The timer will begin when they join. <gray>Reason: <white>%reason%</white>."
   received: "<red>You have been muted <white>%player-duration%</white>. <gray>Reason: <white>%reason%</white>."
   chat-blocked: "<red>You have been muted <white>%duration%</white>. <gray>Reason: <white>%reason%</white>."
   already-muted: "<red>This player is already muted."

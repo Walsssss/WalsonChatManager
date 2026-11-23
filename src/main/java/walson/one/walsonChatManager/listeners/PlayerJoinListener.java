@@ -1,12 +1,13 @@
-
 package walson.one.walsonChatManager.listeners;
 
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.entity.Player;
 import walson.one.walsonChatManager.WalsonChatManager;
 import walson.one.walsonChatManager.managers.ChatInputManager;
+import walson.one.walsonChatManager.managers.SoundManager;
 import walson.one.walsonChatManager.models.MuteData;
 import walson.one.walsonChatManager.utils.MessageUtils;
 import walson.one.walsonChatManager.utils.TimeUtils;
@@ -28,41 +29,43 @@ public class PlayerJoinListener implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        MuteData mute = plugin.getMuteManager()
-                .getMute(event.getPlayer().getUniqueId());
+        Player player = event.getPlayer();
 
-        if (mute == null) {
+        // A pending offline mute becomes active now, so its duration starts
+        // at this join rather than when staff originally issued the mute.
+        MuteData activated = plugin.getMuteManager()
+                .activatePendingMute(player.getUniqueId());
+
+        MuteData mute = activated != null
+                ? activated
+                : plugin.getMuteManager().getMute(player.getUniqueId());
+
+        if (mute == null || mute.isExpired()) {
             return;
         }
 
-        if (mute.isExpired()) {
-            return;
-        }
+        String duration = mute.isPermanent()
+                ? "Permanent"
+                : TimeUtils.formatDuration(mute.getRemainingTime());
 
         MessageUtils.send(
-                event.getPlayer(),
+                player,
                 plugin.getMessages(),
-                "mute.received"
-        );
-
-        MessageUtils.send(
-                event.getPlayer(),
-                plugin.getMessages(),
-                "mute.received-reason",
-                Map.of("reason", mute.reason())
-        );
-
-        MessageUtils.send(
-                event.getPlayer(),
-                plugin.getMessages(),
-                "mute.received-duration",
+                "mute.received",
                 Map.of(
-                        "duration",
-                        mute.isPermanent()
-                                ? "Permanent"
-                                : TimeUtils.formatDuration(mute.getRemainingTime())
+                        "reason", mute.reason(),
+                        "duration", duration,
+                        "player-duration", TimeUtils.formatPlayerMuteDuration(
+                                mute.isPermanent() ? -1L : mute.getRemainingTime()
+                        )
                 )
         );
+
+        // Only newly activated offline mutes play the mute sound on join.
+        // Existing mutes do not replay their sound on every reconnect.
+        if (activated != null && plugin.getSoundManager() != null) {
+            plugin.getSoundManager().play(player, SoundManager.SoundEvent.MUTE);
+        }
     }
 
     @EventHandler

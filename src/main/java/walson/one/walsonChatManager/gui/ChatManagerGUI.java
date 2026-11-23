@@ -15,6 +15,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import walson.one.walsonChatManager.WalsonChatManager;
 import walson.one.walsonChatManager.managers.ChatInputManager;
 import walson.one.walsonChatManager.managers.GlobalChatManager;
+import walson.one.walsonChatManager.managers.SoundManager;
+import walson.one.walsonChatManager.managers.SoundManager.SoundEvent;
 import walson.one.walsonChatManager.utils.MessageUtils;
 
 import java.util.ArrayList;
@@ -32,6 +34,7 @@ public class ChatManagerGUI {
     private final ChatFilterGUI chatFilterGUI;
     private final ChatInputManager chatInputManager;
     private final GlobalChatManager globalChatManager;
+    private final SoundManager soundManager;
 
     public ChatManagerGUI(
             WalsonChatManager plugin,
@@ -40,7 +43,8 @@ public class ChatManagerGUI {
             MuteHistoryGUI muteHistoryGUI,
             ChatFilterGUI chatFilterGUI,
             ChatInputManager chatInputManager,
-            GlobalChatManager globalChatManager
+            GlobalChatManager globalChatManager,
+            SoundManager soundManager
     ) {
         this.plugin = plugin;
         this.muteGUI = muteGUI;
@@ -49,6 +53,7 @@ public class ChatManagerGUI {
         this.chatFilterGUI = chatFilterGUI;
         this.chatInputManager = chatInputManager;
         this.globalChatManager = globalChatManager;
+        this.soundManager = soundManager;
     }
 
     // =========================================================
@@ -143,6 +148,19 @@ public class ChatManagerGUI {
         ));
         holder.addOption(24, "global");
 
+        // Sound settings
+        inventory.setItem(30, createItem(
+                Material.NOTE_BLOCK,
+                "<gold>Sound Settings",
+                List.of(
+                        "<gray>Customize notification sounds.",
+                        "<gray>Set sound, volume and pitch.",
+                        "",
+                        "<yellow>Click to manage sounds"
+                )
+        ));
+        holder.addOption(30, "sounds");
+
         // Reload
         inventory.setItem(31, createItem(
                 Material.COMPASS,
@@ -195,6 +213,8 @@ public class ChatManagerGUI {
             }
 
             case "global" -> toggleGlobalChat(player);
+
+            case "sounds" -> openSoundSettings(player);
 
             case "reload" -> reloadConfigurations(player);
 
@@ -328,6 +348,135 @@ public class ChatManagerGUI {
     }
 
     // =========================================================
+    // SOUND SETTINGS GUI
+    // =========================================================
+
+    public void openSoundSettings(Player player) {
+        if (!checkPermission(player, "walsonchatmanager.sounds")) return;
+
+        MenuHolder holder = new MenuHolder(
+                MenuHolder.MenuType.SOUND_SETTINGS, null, null
+        );
+        Inventory inventory = Bukkit.createInventory(
+                holder, 54,
+                MINI_MESSAGE.deserialize("<dark_gray>WCM <gray>- <gold>Sound Settings")
+        );
+        holder.setInventory(inventory);
+        fill(inventory);
+
+        SoundEvent[] events = SoundEvent.values();
+        for (int i = 0; i < events.length; i++) {
+            SoundEvent event = events[i];
+            int base = 9 + (i * 9);
+
+            inventory.setItem(base, createItem(
+                    soundManager.isEnabled(event) ? Material.LIME_DYE : Material.GRAY_DYE,
+                    (soundManager.isEnabled(event) ? "<green>Enabled" : "<red>Disabled"),
+                    List.of("<gray>" + event.displayName(), "<yellow>Click to toggle")
+            ));
+            holder.addOption(base, "toggle:" + event.name());
+
+            inventory.setItem(base + 1, createItem(
+                    Material.JUKEBOX,
+                    "<gold>Change Sound",
+                    List.of("<gray>" + event.displayName(),
+                            "<gray>Current: <white>" + soundManager.getSoundName(event),
+                            "", "<yellow>Click and enter a Bukkit Sound name")
+            ));
+            holder.addOption(base + 1, "sound:" + event.name());
+
+            inventory.setItem(base + 2, createItem(
+                    Material.COMPARATOR,
+                    "<aqua>Volume & Pitch",
+                    List.of("<gray>" + event.displayName(),
+                            "<gray>Volume: <white>" + soundManager.getVolume(event),
+                            "<gray>Pitch: <white>" + soundManager.getPitch(event),
+                            "", "<yellow>Click to edit both values")
+            ));
+            holder.addOption(base + 2, "levels:" + event.name());
+
+            inventory.setItem(base + 3, createItem(
+                    Material.NOTE_BLOCK,
+                    "<light_purple>Preview Sound",
+                    List.of("<gray>Plays this sound only for you.", "",
+                            "<yellow>Click to preview")
+            ));
+            holder.addOption(base + 3, "preview:" + event.name());
+        }
+
+        inventory.setItem(53, createItem(
+                Material.ARROW, "<yellow>Back", List.of("<gray>Return to Chat Manager")
+        ));
+        holder.addOption(53, "back");
+        player.openInventory(inventory);
+    }
+
+    public void handleSoundSettingsClick(Player player, MenuHolder holder, String option) {
+        if (!checkPermission(player, "walsonchatmanager.sounds")) return;
+        if (option.equals("back")) {
+            openMain(player);
+            return;
+        }
+
+        String[] parts = option.split(":", 2);
+        if (parts.length != 2) return;
+        SoundEvent event = SoundEvent.fromKey(parts[1]);
+        if (event == null) return;
+
+        switch (parts[0]) {
+            case "toggle" -> {
+                soundManager.setEnabled(event, !soundManager.isEnabled(event));
+                openSoundSettings(player);
+            }
+            case "preview" -> {
+                soundManager.preview(player, event);
+                openSoundSettings(player);
+            }
+            case "sound" -> chatInputManager.request(
+                    player,
+                    "<yellow>Enter a Bukkit Sound name for " + event.displayName()
+                            + " (example: BLOCK_NOTE_BLOCK_BELL):",
+                    input -> {
+                        if (!soundManager.setSoundName(event, input)) {
+                            player.sendMessage(MINI_MESSAGE.deserialize(
+                                    "<red>Unknown sound. Enter a valid Bukkit Sound enum name."
+                            ));
+                        } else {
+                            player.sendMessage(MINI_MESSAGE.deserialize(
+                                    "<green>Sound updated to <white>" + input.toUpperCase()
+                            ));
+                        }
+                        openSoundSettings(player);
+                    }
+            );
+            case "levels" -> chatInputManager.request(
+                    player,
+                    "<yellow>Enter volume and pitch separated by a space (example: 1.0 1.2). Volume: 0-10, pitch: 0-2:",
+                    input -> {
+                        String[] values = input.trim().split("\\s+");
+                        try {
+                            if (values.length != 2) throw new NumberFormatException();
+                            float volume = Float.parseFloat(values[0]);
+                            float pitch = Float.parseFloat(values[1]);
+                            if (!soundManager.setVolumePitch(event, volume, pitch)) {
+                                throw new NumberFormatException();
+                            }
+                            player.sendMessage(MINI_MESSAGE.deserialize(
+                                    "<green>Volume and pitch updated."
+                            ));
+                        } catch (NumberFormatException exception) {
+                            player.sendMessage(MINI_MESSAGE.deserialize(
+                                    "<red>Invalid values. Volume must be 0-10 and pitch must be 0-2."
+                            ));
+                        }
+                        openSoundSettings(player);
+                    }
+            );
+            default -> { }
+        }
+    }
+
+    // =========================================================
     // GLOBAL CHAT
     // =========================================================
 
@@ -365,6 +514,7 @@ public class ChatManagerGUI {
             plugin.getMutePresetManager().reload();
             plugin.getChatFilterManager().reload();
             plugin.getGlobalChatManager().reload();
+            plugin.getSoundManager().reload();
 
             MessageUtils.send(
                     staff,

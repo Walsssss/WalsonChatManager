@@ -41,3 +41,35 @@ integrations:
     announce-unmutes: true
     announce-global-chat: true
     staff-logs: true
+
+# Notification sounds. Sound names must match Bukkit's Sound enum.
+sounds:
+  mute:
+    enabled: true
+    sound: BLOCK_NOTE_BLOCK_BELL
+    volume: 1.0
+    pitch: 1.0
+
+  unmute:
+    enabled: true
+    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+    volume: 1.0
+    pitch: 1.0
+
+  chat-filter-warning:
+    enabled: true
+    sound: BLOCK_NOTE_BLOCK_PLING
+    volume: 1.0
+    pitch: 1.0
+
+  global-chat-muted:
+    enabled: true
+    sound: BLOCK_ANVIL_LAND
+    volume: 1.0
+    pitch: 0.8
+
+  global-chat-unmuted:
+    enabled: true
+    sound: ENTITY_PLAYER_LEVELUP
+    volume: 1.0
+    pitch: 1.0

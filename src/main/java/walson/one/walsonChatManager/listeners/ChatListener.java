@@ -169,6 +169,10 @@ public class ChatListener implements Listener {
                     "filter.warned-category",
                     Map.of("category", rule.id())
             );
+            plugin.getSoundManager().play(
+                    player,
+                    walson.one.walsonChatManager.managers.SoundManager.SoundEvent.FILTER_WARNING
+            );
         }
 
         if (rule.hasAction(FilterAction.MUTE)

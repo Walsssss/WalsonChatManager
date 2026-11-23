@@ -45,7 +45,9 @@ public class MuteManager {
                         result.getString("muted_by"),
                         result.getLong("issued_at"),
                         expiresAt,
-                        result.getInt("silent_announcement") != 0
+                        result.getInt("silent_announcement") != 0,
+                        result.getInt("starts_on_join") != 0,
+                        result.getLong("duration_millis")
                 );
 
                 if (mute.isExpired()) {
@@ -99,7 +101,7 @@ public class MuteManager {
 
         MuteData mute = new MuteData(
                 uuid, username, reason, staff, now, expiresAt,
-                silentAnnouncement
+                silentAnnouncement, false, duration
         );
 
         Connection connection = database.getConnection();
@@ -109,8 +111,8 @@ public class MuteManager {
 
             try (PreparedStatement statement = connection.prepareStatement("""
                     INSERT INTO active_mutes
-                    (uuid, username, reason, muted_by, issued_at, expires_at, silent_announcement)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    (uuid, username, reason, muted_by, issued_at, expires_at, silent_announcement, starts_on_join, duration_millis)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
                     """);
                  PreparedStatement history = connection.prepareStatement("""
                     INSERT INTO mute_history
@@ -130,7 +132,86 @@ public class MuteManager {
                     statement.setLong(6, expiresAt);
                 }
                 statement.setInt(7, silentAnnouncement ? 1 : 0);
+                statement.setLong(8, duration);
 
+                statement.executeUpdate();
+
+                history.setString(1, uuid.toString());
+                history.setString(2, username);
+                history.setString(3, reason);
+                history.setString(4, staff);
+                history.setString(5, duration < 0 ? "PERMANENT" : String.valueOf(duration));
+                history.setLong(6, now);
+                history.setInt(7, silentAnnouncement ? 1 : 0);
+                history.executeUpdate();
+
+                connection.commit();
+                activeMutes.put(uuid, mute);
+                Player target = Bukkit.getPlayer(uuid);
+                if (target != null && plugin.getSoundManager() != null) {
+                    plugin.getSoundManager().play(target,
+                            walson.one.walsonChatManager.managers.SoundManager.SoundEvent.MUTE);
+                }
+                return true;
+
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+
+        } catch (SQLException exception) {
+            plugin.getLogger().severe("Could not mute player: " + exception.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Creates a mute for an offline player. Its timer does not begin until
+     * activatePendingMute() is called when that player next joins.
+     */
+    public boolean mutePendingUntilJoin(
+            UUID uuid,
+            String username,
+            String reason,
+            String staff,
+            long duration,
+            boolean silentAnnouncement
+    ) {
+        if (duration == 0 || activeMutes.containsKey(uuid)) {
+            return false;
+        }
+
+        long now = System.currentTimeMillis();
+        MuteData mute = new MuteData(
+                uuid, username, reason, staff, now, null,
+                silentAnnouncement, true, duration
+        );
+
+        Connection connection = database.getConnection();
+        try {
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    INSERT INTO active_mutes
+                    (uuid, username, reason, muted_by, issued_at, expires_at,
+                     silent_announcement, starts_on_join, duration_millis)
+                    VALUES (?, ?, ?, ?, ?, NULL, ?, 1, ?)
+                    """);
+                 PreparedStatement history = connection.prepareStatement("""
+                    INSERT INTO mute_history
+                    (uuid, username, action, reason, staff, duration, timestamp, silent_announcement)
+                    VALUES (?, ?, 'MUTE', ?, ?, ?, ?, ?)
+                    """)) {
+
+                statement.setString(1, uuid.toString());
+                statement.setString(2, username);
+                statement.setString(3, reason);
+                statement.setString(4, staff);
+                statement.setLong(5, now);
+                statement.setInt(6, silentAnnouncement ? 1 : 0);
+                statement.setLong(7, duration);
                 statement.executeUpdate();
 
                 history.setString(1, uuid.toString());
@@ -152,10 +233,81 @@ public class MuteManager {
             } finally {
                 connection.setAutoCommit(true);
             }
-
         } catch (SQLException exception) {
-            plugin.getLogger().severe("Could not mute player: " + exception.getMessage());
+            plugin.getLogger().severe("Could not create pending offline mute: " + exception.getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Starts an offline player's mute timer at their first join after the
+     * mute was issued. Returns the activated mute, or null if none was pending.
+     */
+    public MuteData activatePendingMute(UUID uuid) {
+        MuteData pending = activeMutes.get(uuid);
+        if (pending == null || !pending.isPendingJoin()) {
+            return null;
+        }
+
+        long now = System.currentTimeMillis();
+        Long expiresAt = null;
+        if (pending.durationMillis() >= 0) {
+            try {
+                expiresAt = Math.addExact(now, pending.durationMillis());
+            } catch (ArithmeticException exception) {
+                plugin.getLogger().severe("Could not calculate offline mute expiry for " + pending.username());
+                return null;
+            }
+        }
+
+        MuteData activated = new MuteData(
+                pending.uuid(), pending.username(), pending.reason(),
+                pending.mutedBy(), now, expiresAt,
+                pending.silentAnnouncement(), false, pending.durationMillis()
+        );
+
+        Connection connection = database.getConnection();
+        try {
+            connection.setAutoCommit(false);
+            try (PreparedStatement update = connection.prepareStatement("""
+                    UPDATE active_mutes
+                    SET issued_at = ?, expires_at = ?, starts_on_join = 0
+                    WHERE uuid = ? AND starts_on_join = 1
+                    """);
+                 PreparedStatement history = connection.prepareStatement("""
+                    UPDATE mute_history SET timestamp = ?
+                    WHERE uuid = ? AND action = 'MUTE' AND timestamp = ?
+                    """)) {
+
+                update.setLong(1, now);
+                if (expiresAt == null) {
+                    update.setNull(2, Types.BIGINT);
+                } else {
+                    update.setLong(2, expiresAt);
+                }
+                update.setString(3, uuid.toString());
+                if (update.executeUpdate() == 0) {
+                    connection.rollback();
+                    return null;
+                }
+
+                history.setLong(1, now);
+                history.setString(2, uuid.toString());
+                history.setLong(3, pending.issuedAt());
+                history.executeUpdate();
+                connection.commit();
+                activeMutes.put(uuid, activated);
+                return activated;
+
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().severe("Could not activate pending mute for " + pending.username() + ": " + exception.getMessage());
+            return null;
         }
     }
 
@@ -189,6 +341,11 @@ public class MuteManager {
 
                 connection.commit();
                 activeMutes.remove(uuid);
+                Player target = Bukkit.getPlayer(uuid);
+                if (target != null && plugin.getSoundManager() != null) {
+                    plugin.getSoundManager().play(target,
+                            walson.one.walsonChatManager.managers.SoundManager.SoundEvent.UNMUTE);
+                }
                 return true;
 
             } catch (SQLException exception) {
@@ -226,8 +383,11 @@ public class MuteManager {
 
         String duration = mute.isPermanent()
                 ? "Permanent"
-                : walson.one.walsonChatManager.utils.TimeUtils
-                        .formatDurationWords(mute.expiresAt() - mute.issuedAt());
+                : walson.one.walsonChatManager.utils.TimeUtils.formatDurationWords(
+                        mute.isPendingJoin()
+                                ? mute.durationMillis()
+                                : mute.expiresAt() - mute.issuedAt()
+                );
 
         Map<String, String> placeholders = Map.of(
                 "player", mute.username(),
@@ -325,6 +485,10 @@ public class MuteManager {
                 Player player = Bukkit.getPlayer(mute.uuid());
                 if (player != null) {
                     MessageUtils.send(player, plugin.getMessages(), "mute.expired");
+                    if (plugin.getSoundManager() != null) {
+                        plugin.getSoundManager().play(player,
+                                walson.one.walsonChatManager.managers.SoundManager.SoundEvent.UNMUTE);
+                    }
                 }
             }
 

@@ -49,7 +49,9 @@ public class DatabaseManager {
                         muted_by TEXT NOT NULL,
                         issued_at INTEGER NOT NULL,
                         expires_at INTEGER,
-                        silent_announcement INTEGER NOT NULL DEFAULT 0
+                        silent_announcement INTEGER NOT NULL DEFAULT 0,
+                        starts_on_join INTEGER NOT NULL DEFAULT 0,
+                        duration_millis INTEGER NOT NULL DEFAULT -1
                     );
                 """);
 
@@ -72,6 +74,10 @@ public class DatabaseManager {
             // Migrate databases created by earlier WalsonChatManager versions.
             addColumnIfMissing("active_mutes", "silent_announcement",
                     "INTEGER NOT NULL DEFAULT 0");
+            addColumnIfMissing("active_mutes", "starts_on_join",
+                    "INTEGER NOT NULL DEFAULT 0");
+            addColumnIfMissing("active_mutes", "duration_millis",
+                    "INTEGER NOT NULL DEFAULT -1");
             addColumnIfMissing("mute_history", "silent_announcement",
                     "INTEGER NOT NULL DEFAULT 0");
 

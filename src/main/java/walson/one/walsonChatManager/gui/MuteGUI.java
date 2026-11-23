@@ -59,6 +59,19 @@ public class MuteGUI {
                 "<dark_gray>Mute Player <gray>- <white>" + username
         );
 
+        if (!target.isOnline()) {
+            inventory.setItem(
+                    4,
+                    createItem(
+                            Material.CLOCK,
+                            "<yellow>Offline Player",
+                            "<gray>The mute will be saved immediately.",
+                            "<gray>The duration starts when this player joins.",
+                            "<gray>They will receive their mute notice on join."
+                    )
+            );
+        }
+
         List<MutePresetManager.Preset> durations = presets.getDurations();
 
         int index = 0;
@@ -274,14 +287,26 @@ public class MuteGUI {
             return;
         }
 
-        boolean success = plugin.getMuteManager().mute(
-                holder.getTargetUUID(),
-                holder.getTargetName(),
-                reason,
-                staff.getName(),
-                duration,
-                holder.isSilentAnnouncement()
-        );
+        OfflinePlayer target = Bukkit.getOfflinePlayer(holder.getTargetUUID());
+        boolean offlineTarget = !target.isOnline();
+
+        boolean success = offlineTarget
+                ? plugin.getMuteManager().mutePendingUntilJoin(
+                        holder.getTargetUUID(),
+                        holder.getTargetName(),
+                        reason,
+                        staff.getName(),
+                        duration,
+                        holder.isSilentAnnouncement()
+                )
+                : plugin.getMuteManager().mute(
+                        holder.getTargetUUID(),
+                        holder.getTargetName(),
+                        reason,
+                        staff.getName(),
+                        duration,
+                        holder.isSilentAnnouncement()
+                );
 
         if (!success) {
             staff.sendMessage(
@@ -301,7 +326,7 @@ public class MuteGUI {
         MessageUtils.send(
                 staff,
                 plugin.getMessages(),
-                "mute.success",
+                offlineTarget ? "mute.pending-success" : "mute.success",
                 Map.of(
                         "player", holder.getTargetName(),
                         "reason", reason,
@@ -309,8 +334,6 @@ public class MuteGUI {
                             "player-duration", TimeUtils.formatPlayerMuteDuration(duration)
                 )
         );
-
-        OfflinePlayer target = Bukkit.getOfflinePlayer(holder.getTargetUUID());
 
         if (target.isOnline() && target.getPlayer() != null) {
             MessageUtils.send(

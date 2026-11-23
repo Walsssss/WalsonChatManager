@@ -53,6 +53,11 @@ public class MuteCommand implements CommandExecutor {
 
         OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
 
+        if (!target.isOnline() && !target.hasPlayedBefore()) {
+            MessageUtils.send(sender, plugin.getMessages(), "general.player-not-found");
+            return true;
+        }
+
         if (args.length == 1) {
             if (!(sender instanceof Player staff)) {
                 sender.sendMessage(miniMessage.deserialize(
@@ -89,13 +94,16 @@ public class MuteCommand implements CommandExecutor {
             return true;
         }
 
-        boolean success = plugin.getMuteManager().mute(
-                target.getUniqueId(),
-                target.getName() == null ? targetName : target.getName(),
-                reason,
-                staffName,
-                duration
-        );
+        String resolvedName = target.getName() == null ? targetName : target.getName();
+        boolean offlineTarget = !target.isOnline();
+
+        boolean success = offlineTarget
+                ? plugin.getMuteManager().mutePendingUntilJoin(
+                        target.getUniqueId(), resolvedName, reason, staffName, duration, false
+                )
+                : plugin.getMuteManager().mute(
+                        target.getUniqueId(), resolvedName, reason, staffName, duration
+                );
 
         if (!success) {
             sender.sendMessage(miniMessage.deserialize(
@@ -113,12 +121,12 @@ public class MuteCommand implements CommandExecutor {
         MessageUtils.send(
                 sender,
                 plugin.getMessages(),
-                "mute.success",
+                offlineTarget ? "mute.pending-success" : "mute.success",
                 Map.of(
-                        "player", targetName,
+                        "player", resolvedName,
                         "reason", reason,
                         "duration", formattedDuration,
-                            "player-duration", TimeUtils.formatPlayerMuteDuration(duration)
+                        "player-duration", TimeUtils.formatPlayerMuteDuration(duration)
                 )
         );
 

@@ -81,6 +81,9 @@ public class GUIListener implements Listener {
 
             case CHAT_MANAGER ->
                     chatManagerGUI.handleClick(player, holder, option);
+
+            case SOUND_SETTINGS ->
+                    chatManagerGUI.handleSoundSettingsClick(player, holder, option);
         }
     }
 

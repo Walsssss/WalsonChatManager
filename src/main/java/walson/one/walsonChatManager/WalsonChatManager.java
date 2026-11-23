@@ -30,6 +30,7 @@ import walson.one.walsonChatManager.managers.ConfigManager;
 import walson.one.walsonChatManager.managers.GlobalChatManager;
 import walson.one.walsonChatManager.managers.MuteManager;
 import walson.one.walsonChatManager.managers.MutePresetManager;
+import walson.one.walsonChatManager.managers.SoundManager;
 
 import java.util.Objects;
 
@@ -44,6 +45,7 @@ public final class WalsonChatManager extends JavaPlugin {
     private ChatInputManager chatInputManager;
     private ChatFilterManager chatFilterManager;
     private GlobalChatManager globalChatManager;
+    private SoundManager soundManager;
 
     private MuteGUI muteGUI;
     private UnmuteGUI unmuteGUI;
@@ -64,8 +66,9 @@ public final class WalsonChatManager extends JavaPlugin {
         configManager = new ConfigManager(this);
         configManager.loadFiles();
 
-        // Initialize global chat management.
+        // Initialize global chat and notification sound management.
         globalChatManager = new GlobalChatManager(this);
+        soundManager = new SoundManager(this);
 
         // Initialize database.
         databaseManager = new DatabaseManager(this);
@@ -114,7 +117,8 @@ public final class WalsonChatManager extends JavaPlugin {
                 muteHistoryGUI,
                 chatFilterGUI,
                 chatInputManager,
-                globalChatManager
+                globalChatManager,
+                soundManager
         );
 
         // Register commands.
@@ -286,6 +290,10 @@ public final class WalsonChatManager extends JavaPlugin {
 
     public GlobalChatManager getGlobalChatManager() {
         return globalChatManager;
+    }
+
+    public SoundManager getSoundManager() {
+        return soundManager;
     }
 
     public MuteGUI getMuteGUI() {

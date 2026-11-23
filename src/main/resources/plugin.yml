@@ -54,6 +54,7 @@ permissions:
       walsonchatmanager.mute: true
       walsonchatmanager.mutehistory: true
       walsonchatmanager.gui: true
+      walsonchatmanager.sounds: true
       walsonchatmanager.filter: true
       walsonchatmanager.muteglobal: true
       walsonchatmanager.bypass.globalmute: true
@@ -98,4 +99,8 @@ permissions:
 
   walsonchatmanager.filter.notify:
     description: Receives notifications when players trigger chat filters.
+    default: op
+
+  walsonchatmanager.sounds:
+    description: Allows editing notification sound settings in the Chat Manager GUI.
     default: op
