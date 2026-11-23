@@ -1,0 +1,6 @@
+name: WalsonChatManager
+version: '${version}'
+
+main: walson.one.walsonChatManager.WalsonChatManager
+api-version: '26.3'
+load: POSTWORLD
