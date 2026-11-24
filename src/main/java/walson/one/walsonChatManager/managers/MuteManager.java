@@ -558,6 +558,66 @@ public class MuteManager {
         }
     }
 
+    /**
+     * Records one chat-filter violation for a matched chat message.
+     * A single message is counted once, even if its rule has multiple actions.
+     */
+    public void recordChatFilterViolation(
+            UUID uuid,
+            String username,
+            String ruleId,
+            String matchedWord
+    ) {
+        if (uuid == null || username == null || ruleId == null || matchedWord == null) {
+            return;
+        }
+
+        try (PreparedStatement statement = database.getConnection().prepareStatement("""
+                INSERT INTO chat_filter_violations
+                (uuid, username, rule_id, matched_word, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+                """)) {
+            statement.setString(1, uuid.toString());
+            statement.setString(2, username);
+            statement.setString(3, ruleId);
+            statement.setString(4, matchedWord);
+            statement.setLong(5, System.currentTimeMillis());
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            plugin.getLogger().severe(
+                    "Could not record chat-filter violation for "
+                            + username + ": " + exception.getMessage()
+            );
+        }
+    }
+
+    /**
+     * Returns the player's lifetime number of messages matched by the
+     * chat filter, including warnings, blocked messages, and filter mutes.
+     */
+    public int getChatFilterViolationCount(UUID uuid) {
+        if (uuid == null) {
+            return 0;
+        }
+
+        try (PreparedStatement statement = database.getConnection().prepareStatement("""
+                SELECT COUNT(*) AS total
+                FROM chat_filter_violations
+                WHERE uuid = ?
+                """)) {
+            statement.setString(1, uuid.toString());
+
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next() ? result.getInt("total") : 0;
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().severe(
+                    "Could not count chat-filter violations: " + exception.getMessage()
+            );
+            return 0;
+        }
+    }
+
     public List<MuteHistoryEntry> getMuteHistory(UUID uuid, int limit, int offset) {
         List<MuteHistoryEntry> entries = new ArrayList<>();
 

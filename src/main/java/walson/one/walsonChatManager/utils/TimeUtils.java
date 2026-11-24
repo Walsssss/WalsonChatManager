@@ -52,26 +52,7 @@ public final class TimeUtils {
     }
 
     public static String formatDuration(long milliseconds) {
-        if (milliseconds < 0) {
-            return "Permanent";
-        }
-
-        long seconds = milliseconds / 1_000L;
-        long days = seconds / 86_400;
-        seconds %= 86_400;
-        long hours = seconds / 3_600;
-        seconds %= 3_600;
-        long minutes = seconds / 60;
-        seconds %= 60;
-
-        StringBuilder result = new StringBuilder();
-
-        if (days > 0) result.append(days).append("d ");
-        if (hours > 0) result.append(hours).append("h ");
-        if (minutes > 0) result.append(minutes).append("m ");
-        if (seconds > 0 || result.isEmpty()) result.append(seconds).append("s");
-
-        return result.toString().trim();
+        return formatDurationWords(milliseconds);
     }
 
     public static String formatDurationWords(long milliseconds) {
@@ -93,15 +74,24 @@ public final class TimeUtils {
 
         List<String> parts = new ArrayList<>();
 
-        if (days > 0) parts.add(days + (days == 1 ? " day" : " days"));
-        if (hours > 0) parts.add(hours + (hours == 1 ? " hour" : " hours"));
-        if (minutes > 0) parts.add(minutes + (minutes == 1 ? " minute" : " minutes"));
-        if (seconds > 0 && parts.isEmpty()) {
-            parts.add(seconds + (seconds == 1 ? " second" : " seconds"));
+        if (days > 0) {
+            parts.add(days + (days == 1 ? " day" : " days"));
+        }
+        if (hours > 0) {
+            parts.add(hours + (hours == 1 ? " hour" : " hours"));
+        }
+        if (minutes > 0 || days > 0 || hours > 0) {
+            parts.add(minutes + (minutes == 1 ? " min" : " mins"));
+        }
+        // Always show seconds alongside minutes/hours so staff and players
+        // can see the full remaining duration (for example, "9 mins, 59 secs").
+        if (seconds > 0 || parts.isEmpty() || minutes > 0 || hours > 0 || days > 0) {
+            parts.add(seconds + (seconds == 1 ? " sec" : " secs"));
         }
 
-        return parts.isEmpty() ? "less than a second" : String.join(" ", parts);
+        return String.join(", ", parts);
     }
+
     public static String formatPlayerMuteDuration(long milliseconds) {
         if (milliseconds < 0) {
             return "permanently";

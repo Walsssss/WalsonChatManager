@@ -29,7 +29,6 @@ import java.util.Map;
 public class ChatListener implements Listener {
 
     private final WalsonChatManager plugin;
-
     private final ChatInputManager chatInputManager;
     private final ChatFilterManager chatFilterManager;
     private final GlobalChatManager globalChatManager;
@@ -137,10 +136,12 @@ public class ChatListener implements Listener {
 
         FilterRule rule = match.rule();
 
+        // Block messages for BLOCK_MESSAGE, MUTE, and TEMPORARY_MUTE.
         if (rule.blocksMessage()) {
             event.setCancelled(true);
         }
 
+        // Process the matched rule on the main server thread.
         Bukkit.getScheduler().runTask(
                 plugin,
                 () -> applyFilterActions(
@@ -157,10 +158,26 @@ public class ChatListener implements Listener {
             String matchedWord
     ) {
 
+        /*
+         * Count the violation before checking whether the player is
+         * still online. This ensures that a matched message is recorded
+         * even if the player disconnects before this task executes.
+         *
+         * One matched message = one violation, regardless of how many
+         * actions are configured on the rule.
+         */
+        plugin.getMuteManager().recordChatFilterViolation(
+                player.getUniqueId(),
+                player.getName(),
+                rule.id(),
+                matchedWord
+        );
+
         if (!player.isOnline()) {
             return;
         }
 
+        // WARNING action.
         if (rule.hasAction(FilterAction.WARNING)) {
 
             MessageUtils.send(
@@ -169,12 +186,14 @@ public class ChatListener implements Listener {
                     "filter.warned-category",
                     Map.of("category", rule.id())
             );
+
             plugin.getSoundManager().play(
                     player,
                     walson.one.walsonChatManager.managers.SoundManager.SoundEvent.FILTER_WARNING
             );
         }
 
+        // MUTE or TEMPORARY_MUTE action.
         if (rule.hasAction(FilterAction.MUTE)
                 || rule.hasAction(FilterAction.TEMPORARY_MUTE)) {
 
@@ -236,6 +255,7 @@ public class ChatListener implements Listener {
             }
         }
 
+        // Notify staff about the violation.
         if (chatFilterManager.shouldNotifyStaff()) {
             notifyStaff(player, rule, matchedWord);
         }

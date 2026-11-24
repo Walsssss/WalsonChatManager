@@ -69,6 +69,25 @@ public class DatabaseManager {
                         silent_announcement INTEGER NOT NULL DEFAULT 0
                     );
                 """);
+
+                // Every message matching a chat-filter rule is recorded once.
+                // This is separate from mute_history because warnings and
+                // blocked messages are violations even when no mute is issued.
+                statement.execute("""
+                    CREATE TABLE IF NOT EXISTS chat_filter_violations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        uuid TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        rule_id TEXT NOT NULL,
+                        matched_word TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL
+                    );
+                """);
+
+                statement.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_chat_filter_violations_uuid
+                    ON chat_filter_violations(uuid);
+                """);
             }
 
             // Migrate databases created by earlier WalsonChatManager versions.
