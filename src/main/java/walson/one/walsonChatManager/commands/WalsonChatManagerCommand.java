@@ -10,6 +10,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import walson.one.walsonChatManager.managers.ChatFilterManager;
 import walson.one.walsonChatManager.managers.ConfigManager;
+import walson.one.walsonChatManager.managers.DiscordManager;
 import walson.one.walsonChatManager.managers.GlobalChatManager;
 import walson.one.walsonChatManager.managers.MutePresetManager;
 
@@ -20,6 +21,7 @@ public class WalsonChatManagerCommand implements CommandExecutor {
     private final MutePresetManager mutePresetManager;
     private final ChatFilterManager chatFilterManager;
     private final GlobalChatManager globalChatManager;
+    private final DiscordManager discordManager;
 
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
@@ -28,13 +30,15 @@ public class WalsonChatManagerCommand implements CommandExecutor {
             ConfigManager configManager,
             MutePresetManager mutePresetManager,
             ChatFilterManager chatFilterManager,
-            GlobalChatManager globalChatManager
+            GlobalChatManager globalChatManager,
+            DiscordManager discordManager
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.mutePresetManager = mutePresetManager;
         this.chatFilterManager = chatFilterManager;
         this.globalChatManager = globalChatManager;
+        this.discordManager = discordManager;
     }
 
     @Override
@@ -59,6 +63,23 @@ public class WalsonChatManagerCommand implements CommandExecutor {
                 }
 
                 sendHelp(sender);
+            }
+
+            case "discordstatus" -> {
+                if (!sender.hasPermission("walsonchatmanager.discord.status")) {
+                    sendMessage(sender, "<red>You don't have permission to view Discord integration status.");
+                    return true;
+                }
+                discordManager.sendCompatibilityReport(sender);
+            }
+
+            case "discordcheck" -> {
+                if (!sender.hasPermission("walsonchatmanager.discord.status")) {
+                    sendMessage(sender, "<red>You don't have permission to run Discord compatibility checks.");
+                    return true;
+                }
+                sendMessage(sender, "<yellow>Running DiscordSRV compatibility checks. This may take a few seconds...");
+                discordManager.runCompatibilityCheck(sender);
             }
 
             case "reload" -> {
@@ -94,6 +115,12 @@ public class WalsonChatManagerCommand implements CommandExecutor {
 
         sendMessage(sender,
                 "<light_purple>/walsonchatmanager reload</light_purple> <gray>- Reloads plugin configuration files.");
+
+        sendMessage(sender,
+                "<light_purple>/walsonchatmanager discordstatus</light_purple> <gray>- Shows DiscordSRV integration health.");
+
+        sendMessage(sender,
+                "<light_purple>/walsonchatmanager discordcheck</light_purple> <gray>- Runs a fresh DiscordSRV compatibility check.");
 
         sendMessage(sender,
                 "<light_purple>/chatmanager</light_purple> <gray>- Opens the main management GUI.");
@@ -132,6 +159,9 @@ public class WalsonChatManagerCommand implements CommandExecutor {
             mutePresetManager.reload();
             chatFilterManager.reload();
             globalChatManager.reload();
+            discordManager.reload();
+            discordManager.startPunishmentSync();
+            discordManager.startCompatibilityMonitoring();
             if (plugin instanceof walson.one.walsonChatManager.WalsonChatManager wcm) {
                 wcm.getSoundManager().reload();
                 wcm.getAntiSpamManager().reload();

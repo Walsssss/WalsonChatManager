@@ -102,11 +102,15 @@ public class GlobalChatManager {
             broadcast(muted, staff);
         }
 
-        if (plugin instanceof walson.one.walsonChatManager.WalsonChatManager wcm
-                && wcm.getSoundManager() != null) {
-            wcm.getSoundManager().broadcast(muted
-                    ? walson.one.walsonChatManager.managers.SoundManager.SoundEvent.GLOBAL_MUTED
-                    : walson.one.walsonChatManager.managers.SoundManager.SoundEvent.GLOBAL_UNMUTED);
+        if (plugin instanceof walson.one.walsonChatManager.WalsonChatManager wcm) {
+            if (wcm.getSoundManager() != null) {
+                wcm.getSoundManager().broadcast(muted
+                        ? walson.one.walsonChatManager.managers.SoundManager.SoundEvent.GLOBAL_MUTED
+                        : walson.one.walsonChatManager.managers.SoundManager.SoundEvent.GLOBAL_UNMUTED);
+            }
+            if (wcm.getDiscordManager() != null) {
+                wcm.getDiscordManager().sendGlobalChat(muted, staff);
+            }
         }
 
         return true;

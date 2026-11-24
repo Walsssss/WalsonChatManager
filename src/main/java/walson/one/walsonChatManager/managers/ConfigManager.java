@@ -38,8 +38,8 @@ public class ConfigManager {
                 plugin.saveResource(name, false);
             }
 
-            if ("messages.yml".equals(name)) {
-                mergeMissingMessageDefaults(file);
+            if ("messages.yml".equals(name) || "discord.yml".equals(name)) {
+                mergeMissingDefaults(file, name);
             }
 
             configurations.put(name, YamlConfiguration.loadConfiguration(file));
@@ -63,8 +63,8 @@ public class ConfigManager {
                 plugin.saveResource(name, false);
             }
 
-            if ("messages.yml".equals(name)) {
-                mergeMissingMessageDefaults(file);
+            if ("messages.yml".equals(name) || "discord.yml".equals(name)) {
+                mergeMissingDefaults(file, name);
             }
 
             configurations.put(name, YamlConfiguration.loadConfiguration(file));
@@ -72,11 +72,11 @@ public class ConfigManager {
     }
 
     /**
-     * Adds newly introduced message keys to existing messages.yml files
-     * without replacing any values customized by the server owner.
+     * Adds newly introduced default keys to an existing YAML file without
+     * replacing any values customized by the server owner.
      */
-    private void mergeMissingMessageDefaults(File file) {
-        try (InputStream resource = plugin.getResource("messages.yml")) {
+    private void mergeMissingDefaults(File file, String resourceName) {
+        try (InputStream resource = plugin.getResource(resourceName)) {
             if (resource == null) {
                 return;
             }
@@ -89,12 +89,12 @@ public class ConfigManager {
             if (mergeSection(current, defaults, "")) {
                 current.save(file);
                 plugin.getLogger().info(
-                        "Added missing default message keys to messages.yml."
+                        "Added missing default keys to " + resourceName + "."
                 );
             }
         } catch (Exception exception) {
             plugin.getLogger().warning(
-                    "Could not merge default messages.yml keys: "
+                    "Could not merge default " + resourceName + " keys: "
                             + exception.getMessage()
             );
         }
@@ -120,9 +120,22 @@ public class ConfigManager {
                             path
                     );
                 }
-            } else if (!target.contains(path)) {
-                target.set(path, defaults.get(path));
-                changed = true;
+            } else {
+                Object defaultValue = defaults.get(path);
+                Object currentValue = target.get(path);
+                boolean missing = !target.contains(path);
+                boolean currentBlank = currentValue instanceof String value
+                        && value.isBlank();
+                boolean defaultHasContent = !(defaultValue instanceof String value)
+                        || !value.isBlank();
+
+                // Existing config files may contain empty placeholders from an
+                // earlier release. Fill those with the bundled default while
+                // preserving non-empty server customizations.
+                if (missing || (currentBlank && defaultHasContent)) {
+                    target.set(path, defaultValue);
+                    changed = true;
+                }
             }
         }
 

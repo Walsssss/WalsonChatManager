@@ -1,42 +1,136 @@
-
 settings:
   enabled: true
   require-discordsrv: false
+
+diagnostics:
+  enabled: true
+  # Periodically re-checks DiscordSRV API, gateway, guild, token, and bot permissions.
+  interval-seconds: 60
+
+# Mirror Minecraft mutes as Discord member timeouts for DiscordSRV-linked accounts.
+# Discord's native timeout is limited to 28 days. Longer/permanent mutes are
+# refreshed periodically until the Minecraft mute expires or is removed.
+punishment-sync:
+  enabled: true
+  mute-to-timeout: true
+  # Optional. Set your Discord server (guild) ID to guarantee the correct server
+  # receives the timeout. Leave blank to use the first guild containing the user.
+  guild-id: ""
+  remove-timeout-on-unmute: true
+  remove-timeout-on-unlink: true
+  refresh-long-timeouts-hours: 12
 
 channels:
   moderation: "000000000000000000"
   staff: "000000000000000000"
   announcements: "000000000000000000"
 
+events:
+  mute:
+    moderation: true
+    staff: true
+    announcements: true
+  unmute:
+    moderation: true
+    staff: true
+    announcements: true
+  global-chat:
+    staff: true
+    announcements: true
+  chat-filter:
+    staff: true
+
 messages:
   mute:
-    title: "Player Muted"
-    description: |
+    # Sent for normal and silent mutes. Silent mutes still appear here.
+    moderation: |
+      **MUTE ISSUED**
       **Player:** %player%
-      **Staff:** %staff%
+      **Staff / Source:** %staff%
       **Duration:** %duration%
+      **Reason:** %reason%
+      **Silent public announcement:** %silent%
+      **Pending until join:** %pending%
+    staff: |
+      **MODERATION LOG — MUTE**
+      **Player:** %player%
+      **Staff / Source:** %staff%
+      **Duration:** %duration%
+      **Reason:** %reason%
+      **Silent:** %silent%
+      **Pending until join:** %pending%
+    announcement: |
+      🔇 **%player%** has been muted for **%duration%** by **%staff%**.
       **Reason:** %reason%
 
   unmute:
-    title: "Player Unmuted"
-    description: |
+    moderation: |
+      **PLAYER UNMUTED**
       **Player:** %player%
       **Staff:** %staff%
       **Reason:** %reason%
+      **Previous mute duration:** %duration%
+      **Original mute reason:** %original-reason%
+    staff: |
+      **MODERATION LOG — UNMUTE**
+      **Player:** %player%
+      **Staff:** %staff%
+      **Unmute reason:** %reason%
+      **Previous mute reason:** %original-reason%
+      **Original muted by:** %original-staff%
+      **Previous mute duration:** %duration%
+    announcement: |
+      🔊 **%player%** has been unmuted by **%staff%**.
+      **Reason:** %reason%
 
   global-muted:
-    title: "Global Chat Disabled"
-    description: "Global chat was disabled by %staff%."
+    announcement: |
+      🔒 **Global chat has been disabled by %staff%.**
+    staff: |
+      **STAFF LOG — GLOBAL CHAT DISABLED**
+      **Staff:** %staff%
 
   global-unmuted:
-    title: "Global Chat Enabled"
-    description: "Global chat was enabled by %staff%."
-
-  staff-log:
-    title: "Moderation Log"
-    description: |
-      **Action:** %action%
-      **Target:** %player%
+    announcement: |
+      🔓 **Global chat has been enabled by %staff%.**
+    staff: |
+      **STAFF LOG — GLOBAL CHAT ENABLED**
       **Staff:** %staff%
-      **Duration:** %duration%
-      **Reason:** %reason%
+
+  chat-filter:
+    staff: |
+      **CHAT FILTER VIOLATION**
+      **Player:** %player%
+      **Rule:** %rule%
+      **Matched text:** %matched%
+      **Actions:** %actions%
+
+  # Legacy templates retained for compatibility with earlier configurations.
+  legacy:
+    mute:
+      title: "Player Muted"
+      description: |
+        **Player:** %player%
+        **Staff:** %staff%
+        **Duration:** %duration%
+        **Reason:** %reason%
+    unmute:
+      title: "Player Unmuted"
+      description: |
+        **Player:** %player%
+        **Staff:** %staff%
+        **Reason:** %reason%
+    global-muted:
+      title: "Global Chat Disabled"
+      description: "Global chat was disabled by %staff%."
+    global-unmuted:
+      title: "Global Chat Enabled"
+      description: "Global chat was enabled by %staff%."
+    staff-log:
+      title: "Moderation Log"
+      description: |
+        **Action:** %action%
+        **Target:** %player%
+        **Staff:** %staff%
+        **Duration:** %duration%
+        **Reason:** %reason%

@@ -29,6 +29,7 @@ import walson.one.walsonChatManager.managers.AntiSpamManager;
 import walson.one.walsonChatManager.managers.ChatFilterManager;
 import walson.one.walsonChatManager.managers.ChatInputManager;
 import walson.one.walsonChatManager.managers.ConfigManager;
+import walson.one.walsonChatManager.managers.DiscordManager;
 import walson.one.walsonChatManager.managers.GlobalChatManager;
 import walson.one.walsonChatManager.managers.MuteManager;
 import walson.one.walsonChatManager.managers.MutePresetManager;
@@ -41,6 +42,7 @@ public final class WalsonChatManager extends JavaPlugin {
     private static WalsonChatManager instance;
 
     private ConfigManager configManager;
+    private DiscordManager discordManager;
     private DatabaseManager databaseManager;
     private MuteManager muteManager;
     private MutePresetManager mutePresetManager;
@@ -70,6 +72,16 @@ public final class WalsonChatManager extends JavaPlugin {
         configManager = new ConfigManager(this);
         configManager.loadFiles();
 
+        // Initialize optional DiscordSRV integration after discord.yml is loaded.
+        discordManager = new DiscordManager(this, configManager);
+        if (discordManager.isRequiredButUnavailable()) {
+            getLogger().severe(
+                    "DiscordSRV is required by discord.yml but is unavailable. Disabling WalsonChatManager."
+            );
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         // Initialize global chat and notification sound management.
         globalChatManager = new GlobalChatManager(this);
         soundManager = new SoundManager(this);
@@ -87,6 +99,8 @@ public final class WalsonChatManager extends JavaPlugin {
         // Initialize mute management.
         muteManager = new MuteManager(this, databaseManager);
         muteManager.loadMutes();
+        discordManager.startPunishmentSync();
+        discordManager.startCompatibilityMonitoring();
 
         // Initialize managers.
         mutePresetManager = new MutePresetManager(configManager);
@@ -174,13 +188,6 @@ public final class WalsonChatManager extends JavaPlugin {
                 20L
         );
 
-        // DiscordSRV detection.
-        if (getServer().getPluginManager().getPlugin("DiscordSRV") != null) {
-            getLogger().info("DiscordSRV detected.");
-        } else {
-            getLogger().info("DiscordSRV not installed. Integration skipped.");
-        }
-
         getLogger().info("WalsonChatManager enabled successfully!");
         getLogger().info(
                 "Loaded active mutes: "
@@ -220,7 +227,8 @@ public final class WalsonChatManager extends JavaPlugin {
                         configManager,
                         mutePresetManager,
                         chatFilterManager,
-                        globalChatManager
+                        globalChatManager,
+                        discordManager
                 )
         );
 
@@ -279,6 +287,10 @@ public final class WalsonChatManager extends JavaPlugin {
 
     public ConfigManager getConfigManager() {
         return configManager;
+    }
+
+    public DiscordManager getDiscordManager() {
+        return discordManager;
     }
 
     public DatabaseManager getDatabaseManager() {

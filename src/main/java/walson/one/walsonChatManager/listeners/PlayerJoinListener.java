@@ -44,6 +44,12 @@ public class PlayerJoinListener implements Listener {
             return;
         }
 
+        // Apply a pending mute's full duration on first join, or restore the
+        // remaining timeout if an already-active mute survived a restart.
+        if (plugin.getDiscordManager() != null) {
+            plugin.getDiscordManager().syncMute(mute);
+        }
+
         String duration = mute.isPermanent()
                 ? "Permanent"
                 : TimeUtils.formatDuration(mute.getRemainingTime());

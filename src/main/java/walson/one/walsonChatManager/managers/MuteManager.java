@@ -147,6 +147,9 @@ public class MuteManager {
 
                 connection.commit();
                 activeMutes.put(uuid, mute);
+                if (plugin.getDiscordManager() != null) {
+                    plugin.getDiscordManager().syncMute(mute);
+                }
                 Player target = Bukkit.getPlayer(uuid);
                 if (target != null && plugin.getSoundManager() != null) {
                     plugin.getSoundManager().play(target,
@@ -341,6 +344,10 @@ public class MuteManager {
 
                 connection.commit();
                 activeMutes.remove(uuid);
+                if (plugin.getDiscordManager() != null) {
+                    plugin.getDiscordManager().removeDiscordTimeout(uuid);
+                    plugin.getDiscordManager().sendUnmute(mute, reason, staff);
+                }
                 Player target = Bukkit.getPlayer(uuid);
                 if (target != null && plugin.getSoundManager() != null) {
                     plugin.getSoundManager().play(target,
@@ -371,7 +378,17 @@ public class MuteManager {
      * logging, but are intentionally omitted from public announcements.
      */
     public void announceMute(MuteData mute) {
-        if (mute == null || mute.silentAnnouncement()) {
+        if (mute == null) {
+            return;
+        }
+
+        // Discord moderation and staff logs are retained for silent mutes.
+        if (plugin.getDiscordManager() != null) {
+            plugin.getDiscordManager().sendMute(mute);
+        }
+
+        // Silent mutes suppress only public announcements.
+        if (mute.silentAnnouncement()) {
             return;
         }
 
@@ -518,7 +535,22 @@ public class MuteManager {
                 connection.setAutoCommit(true);
             }
 
+            // Minecraft mute expiry is authoritative: remove any mirrored
+            // Discord timeout even when the player is offline.
+            if (plugin.getDiscordManager() != null) {
+                plugin.getDiscordManager().removeDiscordTimeout(mute.uuid());
+            }
+
             if (notifyPlayer) {
+                // A timed mute ending is also an unmute event for Discord logs.
+                if (plugin.getDiscordManager() != null) {
+                    plugin.getDiscordManager().sendUnmute(
+                            mute,
+                            "Mute expired",
+                            "SYSTEM"
+                    );
+                }
+
                 Player player = Bukkit.getPlayer(mute.uuid());
                 if (player != null) {
                     MessageUtils.send(player, plugin.getMessages(), "mute.expired");

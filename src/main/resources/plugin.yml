@@ -12,7 +12,7 @@ softdepend:
 commands:
   walsonchatmanager:
     description: Main WalsonChatManager command.
-    usage: /walsonchatmanager <help|reload>
+    usage: /walsonchatmanager <help|reload|discordstatus|discordcheck>
     aliases:
       - wcm
 
@@ -51,6 +51,7 @@ permissions:
     children:
       walsonchatmanager.help: true
       walsonchatmanager.reload: true
+      walsonchatmanager.discord.status: true
       walsonchatmanager.mute: true
       walsonchatmanager.mute.notify: true
       walsonchatmanager.mutehistory: true
@@ -118,4 +119,8 @@ permissions:
 
   walsonchatmanager.bypass.antispam:
     description: Allows bypassing automatic anti-spam detection.
+    default: op
+
+  walsonchatmanager.discord.status:
+    description: Allows viewing and refreshing DiscordSRV integration diagnostics.
     default: op

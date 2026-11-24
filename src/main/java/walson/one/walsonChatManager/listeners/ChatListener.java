@@ -298,6 +298,17 @@ public class ChatListener implements Listener {
                 matchedWord
         );
 
+        if (plugin.getDiscordManager() != null) {
+            String actions = String.join(", ",
+                    rule.actions().stream().map(Enum::name).toList());
+            plugin.getDiscordManager().sendChatFilterViolation(
+                    player.getName(),
+                    rule.id(),
+                    matchedWord,
+                    actions
+            );
+        }
+
         if (!player.isOnline()) {
             return;
         }
