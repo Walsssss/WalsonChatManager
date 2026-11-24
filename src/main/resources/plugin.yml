@@ -52,9 +52,12 @@ permissions:
       walsonchatmanager.help: true
       walsonchatmanager.reload: true
       walsonchatmanager.mute: true
+      walsonchatmanager.mute.notify: true
       walsonchatmanager.mutehistory: true
       walsonchatmanager.gui: true
       walsonchatmanager.sounds: true
+      walsonchatmanager.antispam: true
+      walsonchatmanager.bypass.antispam: true
       walsonchatmanager.filter: true
       walsonchatmanager.muteglobal: true
       walsonchatmanager.bypass.globalmute: true
@@ -71,6 +74,10 @@ permissions:
 
   walsonchatmanager.mute:
     description: Allows muting and unmuting players.
+    default: op
+
+  walsonchatmanager.mute.notify:
+    description: Receives staff notifications when players are automatically muted.
     default: op
 
   walsonchatmanager.mutehistory:
@@ -103,4 +110,12 @@ permissions:
 
   walsonchatmanager.sounds:
     description: Allows editing notification sound settings in the Chat Manager GUI.
+    default: op
+
+  walsonchatmanager.antispam:
+    description: Allows viewing and editing anti-spam settings.
+    default: op
+
+  walsonchatmanager.bypass.antispam:
+    description: Allows bypassing automatic anti-spam detection.
     default: op

@@ -35,6 +35,7 @@ public class ChatManagerGUI {
     private final ChatInputManager chatInputManager;
     private final GlobalChatManager globalChatManager;
     private final SoundManager soundManager;
+    private final AntiSpamGUI antiSpamGUI;
 
     public ChatManagerGUI(
             WalsonChatManager plugin,
@@ -44,7 +45,8 @@ public class ChatManagerGUI {
             ChatFilterGUI chatFilterGUI,
             ChatInputManager chatInputManager,
             GlobalChatManager globalChatManager,
-            SoundManager soundManager
+            SoundManager soundManager,
+            AntiSpamGUI antiSpamGUI
     ) {
         this.plugin = plugin;
         this.muteGUI = muteGUI;
@@ -54,6 +56,7 @@ public class ChatManagerGUI {
         this.chatInputManager = chatInputManager;
         this.globalChatManager = globalChatManager;
         this.soundManager = soundManager;
+        this.antiSpamGUI = antiSpamGUI;
     }
 
     // =========================================================
@@ -161,6 +164,19 @@ public class ChatManagerGUI {
         ));
         holder.addOption(30, "sounds");
 
+        // Anti-spam settings
+        inventory.setItem(32, createItem(
+                Material.CLOCK,
+                "<red>Anti-Spam Settings",
+                List.of(
+                        "<gray>Configure message spam detection.",
+                        "<gray>Set warning and automatic mute thresholds.",
+                        "",
+                        "<yellow>Click to manage anti-spam"
+                )
+        ));
+        holder.addOption(32, "antispam");
+
         // Reload
         inventory.setItem(31, createItem(
                 Material.COMPASS,
@@ -215,6 +231,8 @@ public class ChatManagerGUI {
             case "global" -> toggleGlobalChat(player);
 
             case "sounds" -> openSoundSettings(player);
+
+            case "antispam" -> antiSpamGUI.openMain(player);
 
             case "reload" -> reloadConfigurations(player);
 
@@ -515,6 +533,7 @@ public class ChatManagerGUI {
             plugin.getChatFilterManager().reload();
             plugin.getGlobalChatManager().reload();
             plugin.getSoundManager().reload();
+            plugin.getAntiSpamManager().reload();
 
             MessageUtils.send(
                     staff,

@@ -71,5 +71,6 @@ public class PlayerJoinListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         chatInput.cancel(event.getPlayer().getUniqueId());
+        plugin.getAntiSpamManager().forget(event.getPlayer().getUniqueId());
     }
 }

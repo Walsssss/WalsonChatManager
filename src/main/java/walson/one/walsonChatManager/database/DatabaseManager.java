@@ -88,6 +88,22 @@ public class DatabaseManager {
                     CREATE INDEX IF NOT EXISTS idx_chat_filter_violations_uuid
                     ON chat_filter_violations(uuid);
                 """);
+
+                // Persistent anti-spam warning events. Older entries are
+                // removed according to the configured rolling reset period.
+                statement.execute("""
+                    CREATE TABLE IF NOT EXISTS anti_spam_warnings (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        uuid TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL
+                    );
+                """);
+
+                statement.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_anti_spam_warnings_uuid_timestamp
+                    ON anti_spam_warnings(uuid, timestamp);
+                """);
             }
 
             // Migrate databases created by earlier WalsonChatManager versions.

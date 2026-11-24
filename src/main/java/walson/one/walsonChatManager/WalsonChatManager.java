@@ -14,6 +14,7 @@ import walson.one.walsonChatManager.commands.WalsonChatManagerCommand;
 
 import walson.one.walsonChatManager.database.DatabaseManager;
 
+import walson.one.walsonChatManager.gui.AntiSpamGUI;
 import walson.one.walsonChatManager.gui.ChatFilterGUI;
 import walson.one.walsonChatManager.gui.ChatManagerGUI;
 import walson.one.walsonChatManager.gui.GUIListener;
@@ -24,6 +25,7 @@ import walson.one.walsonChatManager.gui.UnmuteGUI;
 import walson.one.walsonChatManager.listeners.ChatListener;
 import walson.one.walsonChatManager.listeners.PlayerJoinListener;
 
+import walson.one.walsonChatManager.managers.AntiSpamManager;
 import walson.one.walsonChatManager.managers.ChatFilterManager;
 import walson.one.walsonChatManager.managers.ChatInputManager;
 import walson.one.walsonChatManager.managers.ConfigManager;
@@ -46,12 +48,14 @@ public final class WalsonChatManager extends JavaPlugin {
     private ChatFilterManager chatFilterManager;
     private GlobalChatManager globalChatManager;
     private SoundManager soundManager;
+    private AntiSpamManager antiSpamManager;
 
     private MuteGUI muteGUI;
     private UnmuteGUI unmuteGUI;
     private ChatFilterGUI chatFilterGUI;
     private MuteHistoryGUI muteHistoryGUI;
     private ChatManagerGUI chatManagerGUI;
+    private AntiSpamGUI antiSpamGUI;
 
     @Override
     public void onEnable() {
@@ -69,6 +73,7 @@ public final class WalsonChatManager extends JavaPlugin {
         // Initialize global chat and notification sound management.
         globalChatManager = new GlobalChatManager(this);
         soundManager = new SoundManager(this);
+        antiSpamManager = new AntiSpamManager(this);
 
         // Initialize database.
         databaseManager = new DatabaseManager(this);
@@ -108,6 +113,11 @@ public final class WalsonChatManager extends JavaPlugin {
         );
 
         muteHistoryGUI = new MuteHistoryGUI(this);
+        antiSpamGUI = new AntiSpamGUI(
+                this,
+                antiSpamManager,
+                chatInputManager
+        );
 
         // Initialize central management GUI.
         chatManagerGUI = new ChatManagerGUI(
@@ -118,7 +128,8 @@ public final class WalsonChatManager extends JavaPlugin {
                 chatFilterGUI,
                 chatInputManager,
                 globalChatManager,
-                soundManager
+                soundManager,
+                antiSpamGUI
         );
 
         // Register commands.
@@ -130,7 +141,8 @@ public final class WalsonChatManager extends JavaPlugin {
                         this,
                         chatInputManager,
                         chatFilterManager,
-                        globalChatManager
+                        globalChatManager,
+                        antiSpamManager
                 ),
                 this
         );
@@ -148,7 +160,8 @@ public final class WalsonChatManager extends JavaPlugin {
                         unmuteGUI,
                         chatFilterGUI,
                         muteHistoryGUI,
-                        chatManagerGUI
+                        chatManagerGUI,
+                        antiSpamGUI
                 ),
                 this
         );
@@ -294,6 +307,10 @@ public final class WalsonChatManager extends JavaPlugin {
 
     public SoundManager getSoundManager() {
         return soundManager;
+    }
+
+    public AntiSpamManager getAntiSpamManager() {
+        return antiSpamManager;
     }
 
     public MuteGUI getMuteGUI() {

@@ -14,19 +14,22 @@ public class GUIListener implements Listener {
     private final ChatFilterGUI chatFilterGUI;
     private final MuteHistoryGUI muteHistoryGUI;
     private final ChatManagerGUI chatManagerGUI;
+    private final AntiSpamGUI antiSpamGUI;
 
     public GUIListener(
             MuteGUI muteGUI,
             UnmuteGUI unmuteGUI,
             ChatFilterGUI chatFilterGUI,
             MuteHistoryGUI muteHistoryGUI,
-            ChatManagerGUI chatManagerGUI
+            ChatManagerGUI chatManagerGUI,
+            AntiSpamGUI antiSpamGUI
     ) {
         this.muteGUI = muteGUI;
         this.unmuteGUI = unmuteGUI;
         this.chatFilterGUI = chatFilterGUI;
         this.muteHistoryGUI = muteHistoryGUI;
         this.chatManagerGUI = chatManagerGUI;
+        this.antiSpamGUI = antiSpamGUI;
     }
 
     @EventHandler
@@ -84,6 +87,9 @@ public class GUIListener implements Listener {
 
             case SOUND_SETTINGS ->
                     chatManagerGUI.handleSoundSettingsClick(player, holder, option);
+
+            case ANTI_SPAM_SETTINGS, ANTI_SPAM_RESET_CONFIRM ->
+                    antiSpamGUI.handleClick(player, holder, option);
         }
     }
 

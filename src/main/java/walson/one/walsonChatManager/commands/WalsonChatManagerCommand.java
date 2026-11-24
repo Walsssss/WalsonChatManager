@@ -134,6 +134,7 @@ public class WalsonChatManagerCommand implements CommandExecutor {
             globalChatManager.reload();
             if (plugin instanceof walson.one.walsonChatManager.WalsonChatManager wcm) {
                 wcm.getSoundManager().reload();
+                wcm.getAntiSpamManager().reload();
             }
 
             sendMessage(

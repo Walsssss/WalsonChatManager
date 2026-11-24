@@ -13,6 +13,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 
 import walson.one.walsonChatManager.WalsonChatManager;
+import walson.one.walsonChatManager.managers.AntiSpamManager;
 import walson.one.walsonChatManager.managers.ChatFilterManager;
 import walson.one.walsonChatManager.managers.ChatInputManager;
 import walson.one.walsonChatManager.managers.GlobalChatManager;
@@ -32,6 +33,7 @@ public class ChatListener implements Listener {
     private final ChatInputManager chatInputManager;
     private final ChatFilterManager chatFilterManager;
     private final GlobalChatManager globalChatManager;
+    private final AntiSpamManager antiSpamManager;
 
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
@@ -39,12 +41,14 @@ public class ChatListener implements Listener {
             WalsonChatManager plugin,
             ChatInputManager chatInputManager,
             ChatFilterManager chatFilterManager,
-            GlobalChatManager globalChatManager
+            GlobalChatManager globalChatManager,
+            AntiSpamManager antiSpamManager
     ) {
         this.plugin = plugin;
         this.chatInputManager = chatInputManager;
         this.chatFilterManager = chatFilterManager;
         this.globalChatManager = globalChatManager;
+        this.antiSpamManager = antiSpamManager;
     }
 
     @EventHandler(
@@ -116,14 +120,39 @@ public class ChatListener implements Listener {
             return;
         }
 
-        // 4. Check chat filter bypass.
+        // 4. Check anti-spam before the chat filter.
+        // The tracker is thread-safe because AsyncChatEvent runs asynchronously.
+        if (!player.hasPermission("walsonchatmanager.bypass.antispam")) {
+            AntiSpamManager.Result spamResult =
+                    antiSpamManager.recordMessage(player.getUniqueId());
+
+            if (spamResult.blocked()) {
+                event.setCancelled(true);
+            }
+
+            // Process every blocked spam message so each one is included in
+            // the Mute History chat-violation total. The warning itself is
+            // still issued only once per separate spam burst.
+            if (spamResult.blocked() || spamResult.warning()) {
+                Bukkit.getScheduler().runTask(plugin, () ->
+                        handleAntiSpamResult(player, spamResult)
+                );
+            }
+
+            // Spam-triggering messages should not also be processed by filters.
+            if (spamResult.blocked()) {
+                return;
+            }
+        }
+
+        // 5. Check chat filter bypass.
         if (player.hasPermission(
                 "walsonchatmanager.bypass.filter"
         )) {
             return;
         }
 
-        // 5. Check chat filter.
+        // 6. Check chat filter.
         String message = PlainTextComponentSerializer.plainText()
                 .serialize(event.message());
 
@@ -149,6 +178,102 @@ public class ChatListener implements Listener {
                         rule,
                         match.matchedWord()
                 )
+        );
+    }
+
+    private void handleAntiSpamResult(
+            Player player,
+            AntiSpamManager.Result result
+    ) {
+        // Every blocked message counts as one chat-filter violation.
+        // This is recorded even if the player disconnects before this task runs.
+        if (result.blocked()) {
+            plugin.getMuteManager().recordChatFilterViolation(
+                    player.getUniqueId(),
+                    player.getName(),
+                    "anti-spam",
+                    "chat spam"
+            );
+        }
+
+        // Warning counters represent warnings actually delivered to the player.
+        if (!result.warning() || !player.isOnline()) {
+            return;
+        }
+
+        long resetWindowMillis = resultWarningResetMillis();
+        int warningCount = plugin.getMuteManager().recordAntiSpamWarning(
+                player.getUniqueId(),
+                player.getName(),
+                resetWindowMillis
+        );
+
+        int warningLimit = antiSpamManager.getWarningsBeforeMute();
+
+        MessageUtils.send(
+                player,
+                plugin.getMessages(),
+                "anti-spam.warning",
+                Map.of(
+                        "warnings", String.valueOf(warningCount),
+                        "limit", String.valueOf(warningLimit),
+                        "cooldown", String.valueOf(result.cooldownSeconds())
+                )
+        );
+
+        plugin.getSoundManager().play(
+                player,
+                walson.one.walsonChatManager.managers.SoundManager.SoundEvent.FILTER_WARNING
+        );
+
+        if (warningCount < warningLimit) {
+            return;
+        }
+
+        boolean muted = plugin.getMuteManager().mute(
+                player.getUniqueId(),
+                player.getName(),
+                result.muteReason(),
+                "Anti-Spam",
+                result.muteDurationMillis()
+        );
+
+        if (!muted) {
+            return;
+        }
+
+        MuteData mute = plugin.getMuteManager().getMute(player.getUniqueId());
+        plugin.getMuteManager().announceMute(mute);
+        plugin.getMuteManager().notifyStaffMute(mute);
+
+        MessageUtils.send(
+                player,
+                plugin.getMessages(),
+                "mute.received",
+                Map.of(
+                        "duration",
+                        TimeUtils.formatDurationWords(result.muteDurationMillis()),
+                        "player-duration",
+                        TimeUtils.formatPlayerMuteDuration(result.muteDurationMillis()),
+                        "reason",
+                        result.muteReason()
+                )
+        );
+
+        MessageUtils.send(
+                player,
+                plugin.getMessages(),
+                "anti-spam.muted",
+                Map.of(
+                        "warnings", String.valueOf(warningCount),
+                        "limit", String.valueOf(warningLimit)
+                )
+        );
+    }
+
+    private long resultWarningResetMillis() {
+        return java.util.concurrent.TimeUnit.HOURS.toMillis(
+                antiSpamManager.getWarningResetHours()
         );
     }
 
@@ -187,10 +312,6 @@ public class ChatListener implements Listener {
                     Map.of("category", rule.id())
             );
 
-            plugin.getSoundManager().play(
-                    player,
-                    walson.one.walsonChatManager.managers.SoundManager.SoundEvent.FILTER_WARNING
-            );
         }
 
         // MUTE or TEMPORARY_MUTE action.

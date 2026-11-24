@@ -19,7 +19,9 @@ public class MenuHolder implements InventoryHolder {
         FILTER_WORDS,
         MUTE_HISTORY,
         CHAT_MANAGER,
-        SOUND_SETTINGS
+        SOUND_SETTINGS,
+        ANTI_SPAM_SETTINGS,
+        ANTI_SPAM_RESET_CONFIRM
     }
 
     private final MenuType type;

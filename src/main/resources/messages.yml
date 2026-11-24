@@ -18,6 +18,7 @@ mute:
   expired: "<green>Your mute has expired."
   permanent: "Permanent"
   announcement: "<yellow><white>%player%</white> has been muted for <white>%duration%</white> by <white>%staff%</white>. <gray>Reason: <white>%reason%</white>."
+  staff-notification: "<dark_gray>[<red>Moderation<dark_gray>] <white>%player%</white> was muted for <white>%duration%</white> by <white>%staff%</white>. <gray>Reason: <white>%reason%</white>."
 
 unmute:
   success: "<green>You have unmuted <white>%player%</white>."
@@ -36,6 +37,10 @@ filter:
   warned: "<red>Please watch your language."
   warned-category: "<red>Please watch your language. <gray>Category: <white>%category%</white>."
   muted: "<red>You were muted for violating the chat rules."
+
+anti-spam:
+  warning: "<red>Spamming is not allowed. Continue to do so, you will get muted. <gray>Chat cooldown: <white>%cooldown%</white> second(s). (Warning <white>%warnings%/%limit%</white>)"
+  muted: "<red>You have been automatically muted for repeated spamming."
 
 database:
   error: "<red>A database error occurred. Please contact an administrator."

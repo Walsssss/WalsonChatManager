@@ -25,6 +25,29 @@ chat:
     enabled: false
     seconds: 3
 
+anti-spam:
+  enabled: true
+
+  # Rolling window used to count consecutive chat messages.
+  window-seconds: 1
+
+  # "More than" semantics: 5 warns and blocks on message 6.
+  warning-threshold: 5
+
+  # Chat is blocked for this many seconds after a spam warning.
+  # Set to 0 to disable the cooldown.
+  cooldown-seconds: 2
+
+  # Number of separate spam warnings allowed before an automatic mute.
+  warnings-before-mute: 4
+
+  # Rolling period in which warnings are counted. Warnings older than this
+  # period are removed from the player's warning total.
+  warning-reset-hours: 24
+
+  mute-duration: "10m"
+  mute-reason: "Spamming"
+
 gui:
   title: "<dark_gray>WalsonChatManager"
   rows: 6

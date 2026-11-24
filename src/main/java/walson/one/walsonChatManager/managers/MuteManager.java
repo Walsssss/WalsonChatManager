@@ -412,6 +412,43 @@ public class MuteManager {
         );
     }
 
+    /**
+     * Sends an additional moderation alert to staff when an automatic
+     * anti-spam mute is issued. Public announcements are handled separately
+     * by announceMute().
+     */
+    public void notifyStaffMute(MuteData mute) {
+        if (mute == null) {
+            return;
+        }
+
+        String duration = mute.isPermanent()
+                ? "Permanent"
+                : walson.one.walsonChatManager.utils.TimeUtils.formatDurationWords(
+                        mute.isPendingJoin()
+                                ? mute.durationMillis()
+                                : mute.expiresAt() - mute.issuedAt()
+                );
+
+        Map<String, String> placeholders = Map.of(
+                "player", mute.username(),
+                "staff", mute.mutedBy(),
+                "duration", duration,
+                "reason", mute.reason()
+        );
+
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (online.hasPermission("walsonchatmanager.mute.notify")) {
+                MessageUtils.send(
+                        online,
+                        plugin.getMessages(),
+                        "mute.staff-notification",
+                        placeholders
+                );
+            }
+        }
+    }
+
     public boolean isMuted(UUID uuid) {
         MuteData mute = activeMutes.get(uuid);
         if (mute == null) return false;
@@ -554,6 +591,102 @@ public class MuteManager {
             }
         } catch (SQLException exception) {
             plugin.getLogger().severe("Could not count mute history: " + exception.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Returns the number of anti-spam warning records currently stored
+     * across all players.
+     */
+    public int getAllAntiSpamWarningCount() {
+        try (PreparedStatement statement = database.getConnection().prepareStatement(
+                "SELECT COUNT(*) AS total FROM anti_spam_warnings");
+             ResultSet result = statement.executeQuery()) {
+            return result.next() ? result.getInt("total") : 0;
+        } catch (SQLException exception) {
+            plugin.getLogger().severe(
+                    "Could not count global anti-spam warnings: " + exception.getMessage()
+            );
+            return 0;
+        }
+    }
+
+    /**
+     * Deletes accumulated anti-spam warning records for every player.
+     * This does not remove chat-filter violations or active mutes.
+     *
+     * @return number of warning records removed, or -1 if the reset failed
+     */
+    public int resetAllAntiSpamWarnings() {
+        try (PreparedStatement statement = database.getConnection().prepareStatement(
+                "DELETE FROM anti_spam_warnings")) {
+            return statement.executeUpdate();
+        } catch (SQLException exception) {
+            plugin.getLogger().severe(
+                    "Could not reset global anti-spam warnings: " + exception.getMessage()
+            );
+            return -1;
+        }
+    }
+
+    /**
+     * Records one delivered anti-spam warning and returns the player's
+     * warning count inside the supplied rolling time window.
+     * The count survives server restarts.
+     */
+    public int recordAntiSpamWarning(
+            UUID uuid,
+            String username,
+            long resetWindowMillis
+    ) {
+        if (uuid == null || username == null || resetWindowMillis <= 0L) {
+            return 0;
+        }
+
+        long now = System.currentTimeMillis();
+        long cutoff = now - resetWindowMillis;
+        Connection connection = database.getConnection();
+
+        try {
+            // Remove this player's expired warnings so the counter resets
+            // to zero once the configured period has elapsed.
+            try (PreparedStatement cleanup = connection.prepareStatement("""
+                    DELETE FROM anti_spam_warnings
+                    WHERE uuid = ? AND timestamp < ?
+                    """)) {
+                cleanup.setString(1, uuid.toString());
+                cleanup.setLong(2, cutoff);
+                cleanup.executeUpdate();
+            }
+
+            try (PreparedStatement insert = connection.prepareStatement("""
+                    INSERT INTO anti_spam_warnings (uuid, username, timestamp)
+                    VALUES (?, ?, ?)
+                    """)) {
+                insert.setString(1, uuid.toString());
+                insert.setString(2, username);
+                insert.setLong(3, now);
+                insert.executeUpdate();
+            }
+
+            try (PreparedStatement count = connection.prepareStatement("""
+                    SELECT COUNT(*) AS total
+                    FROM anti_spam_warnings
+                    WHERE uuid = ? AND timestamp >= ?
+                    """)) {
+                count.setString(1, uuid.toString());
+                count.setLong(2, cutoff);
+
+                try (ResultSet result = count.executeQuery()) {
+                    return result.next() ? result.getInt("total") : 0;
+                }
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().severe(
+                    "Could not record anti-spam warning for "
+                            + username + ": " + exception.getMessage()
+            );
             return 0;
         }
     }
