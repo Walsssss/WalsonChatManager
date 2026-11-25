@@ -20,6 +20,18 @@ punishment-sync:
   remove-timeout-on-unlink: true
   refresh-long-timeouts-hours: 12
 
+# Rich embed styling for every Discord destination.
+embeds:
+  enabled: true
+  timestamp: true
+  footer: "WalsonChatManager"
+  # Optional image shown in the top-right of each embed. Leave blank to disable.
+  thumbnail-url: ""
+  colors:
+    announcements: "22C55E"
+    staff: "F59E0B"
+    moderation: "A855F7"
+
 channels:
   moderation: "000000000000000000"
   staff: "000000000000000000"

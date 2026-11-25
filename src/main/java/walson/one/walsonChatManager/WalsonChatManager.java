@@ -41,6 +41,15 @@ public final class WalsonChatManager extends JavaPlugin {
 
     private static WalsonChatManager instance;
 
+    // ANSI colors for supported server consoles (purple / pink plugin theme).
+    private static final String ANSI_PURPLE = "\u001B[38;5;141m";
+    private static final String ANSI_PINK = "\u001B[38;5;213m";
+    private static final String ANSI_GREEN = "\u001B[38;5;82m";
+    private static final String ANSI_YELLOW = "\u001B[38;5;220m";
+    private static final String ANSI_GRAY = "\u001B[38;5;245m";
+    private static final String ANSI_RED = "\u001B[38;5;203m";
+    private static final String ANSI_RESET = "\u001B[0m";
+
     private ConfigManager configManager;
     private DiscordManager discordManager;
     private DatabaseManager databaseManager;
@@ -63,10 +72,6 @@ public final class WalsonChatManager extends JavaPlugin {
     public void onEnable() {
 
         instance = this;
-
-        getLogger().info("======================================");
-        getLogger().info("       WalsonChatManager");
-        getLogger().info("======================================");
 
         // Load configuration files.
         configManager = new ConfigManager(this);
@@ -188,19 +193,50 @@ public final class WalsonChatManager extends JavaPlugin {
                 20L
         );
 
-        getLogger().info("WalsonChatManager enabled successfully!");
-        getLogger().info(
-                "Loaded active mutes: "
-                        + muteManager.getActiveMutes().size()
-        );
-        getLogger().info(
-                "Loaded chat filter rules: "
-                        + chatFilterManager.getRules().size()
-        );
-        getLogger().info(
-                "Global chat: "
-                        + (globalChatManager.isMuted() ? "MUTED" : "ENABLED")
-        );
+        printStartupBanner();
+    }
+
+
+    /** Prints the branded startup summary after all components initialize. */
+    private void printStartupBanner() {
+        String line = "==========================================================";
+
+        getLogger().info(ANSI_PURPLE + line + ANSI_RESET);
+        getLogger().info(ANSI_PINK + "                 WalsonChatManager" + ANSI_RESET);
+        getLogger().info(ANSI_GRAY + "              Advanced Chat Management" + ANSI_RESET);
+        getLogger().info(ANSI_PURPLE + line + ANSI_RESET);
+
+        printStatus("Configuration", configManager != null);
+        printStatus("SQLite database", databaseManager != null);
+        printStatus("Mute manager", muteManager != null);
+        printStatus("Chat filter", chatFilterManager != null);
+        printStatus("Global chat manager", globalChatManager != null);
+        printStatus("Anti-spam protection", antiSpamManager != null);
+        printStatus("Sound manager", soundManager != null);
+        printStatus("DiscordSRV adapter initialized", discordManager != null);
+
+        getLogger().info(ANSI_GRAY + "  Active mutes: "
+                + (muteManager == null ? 0 : muteManager.getActiveMutes().size())
+                + ANSI_RESET);
+        getLogger().info(ANSI_GRAY + "  Chat filter rules: "
+                + (chatFilterManager == null ? 0 : chatFilterManager.getRules().size())
+                + ANSI_RESET);
+        getLogger().info(ANSI_GRAY + "  Global chat: "
+                + (globalChatManager != null && globalChatManager.isMuted()
+                    ? ANSI_RED + "MUTED" : ANSI_GREEN + "ENABLED")
+                + ANSI_RESET);
+
+        getLogger().info(ANSI_PURPLE + line + ANSI_RESET);
+        getLogger().info(ANSI_PINK + "  Developed by Walson" + ANSI_RESET);
+        getLogger().info(ANSI_PURPLE + "  GitHub: https://github.com/Walsssss" + ANSI_RESET);
+        getLogger().info(ANSI_GREEN + "  WalsonChatManager enabled successfully!" + ANSI_RESET);
+        getLogger().info(ANSI_PURPLE + line + ANSI_RESET);
+    }
+
+    private void printStatus(String component, boolean initialized) {
+        String symbol = initialized ? "[OK] " : "[--] ";
+        String color = initialized ? ANSI_GREEN : ANSI_YELLOW;
+        getLogger().info(color + "  " + symbol + component + ANSI_RESET);
     }
 
     private void registerCommands() {
